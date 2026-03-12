@@ -1,0 +1,432 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+
+  /* parallax hooks */
+  --mx: 0px;
+  --my: 0px;
+
+  /* CSS-variable driven values (overridden in light mode) */
+  --dropdown-bg: rgba(8, 8, 12, 0.96);
+  --dropdown-shadow: 0 16px 48px rgba(0, 0, 0, 0.60);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(1100px 700px at 20% -2%,  rgba(168, 85,  247, 0.18), transparent 50%),
+    radial-gradient(900px  600px at 85%  5%,  rgba(16,  185, 129, 0.12), transparent 50%),
+    radial-gradient(800px  700px at 52%  55%, rgba(59,  130, 246, 0.11), transparent 55%),
+    radial-gradient(700px  500px at 8%   88%, rgba(79,  70,  229, 0.17), transparent 55%),
+    radial-gradient(600px  450px at 92%  90%, rgba(139, 92,  246, 0.12), transparent 50%),
+    #030309;
+
+  background-attachment: fixed;
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Subtle film grain */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.07;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+}
+
+/* Neural connection layer + nodes */
+body::after {
+  content: "";
+  position: fixed;
+  inset: -20%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.42;
+  mix-blend-mode: screen;
+
+  background:
+    repeating-linear-gradient(
+      115deg,
+      rgba(168, 85, 247, 0.16) 0px,
+      rgba(168, 85, 247, 0.16) 2px,
+      transparent 2px,
+      transparent 90px
+    ),
+    repeating-linear-gradient(
+      35deg,
+      rgba(16, 185, 129, 0.14) 0px,
+      rgba(16, 185, 129, 0.14) 2px,
+      transparent 2px,
+      transparent 220px
+    ),
+    repeating-linear-gradient(
+      82deg,
+      rgba(139, 92, 246, 0.09) 0px,
+      rgba(139, 92, 246, 0.09) 1px,
+      transparent 1px,
+      transparent 150px
+    ),
+    repeating-linear-gradient(
+      158deg,
+      rgba(59, 130, 246, 0.11) 0px,
+      rgba(59, 130, 246, 0.11) 1px,
+      transparent 1px,
+      transparent 180px
+    ),
+    radial-gradient(rgba(255, 255, 255, 0.33) 1.6px, transparent 2px);
+
+  background-size: 680px 680px, 880px 880px, 560px 560px, 740px 740px, 140px 140px;
+  background-position: 0 0, 0 0, 0 0, 0 0, 0 0;
+
+  filter: blur(0.12px);
+
+  /* background-position animation scrolls each tile layer by exactly its own
+     tile-size, so every layer loops with zero visible seam.
+     contain: paint isolates the repaint to this single GPU-promoted layer —
+     the rest of the page is never touched.                                   */
+  contain: paint;
+
+  animation:
+    neural-flow  22s linear      infinite,
+    neural-pulse  6s ease-in-out infinite;
+
+  will-change: opacity;
+  transition: opacity 160ms ease;
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(200%); }
+}
+
+@keyframes neural-flow {
+  /* Each layer scrolls diagonally by exactly its own tile size so the loop
+     is perfectly seamless for all five layers simultaneously.               */
+  0% {
+    background-position:
+      0px   0px,
+      0px   0px,
+      0px   0px,
+      0px   0px,
+      0px   0px;
+  }
+  100% {
+    background-position:
+      680px  680px,
+      880px  880px,
+      560px  560px,
+      740px  740px,
+      140px  140px;
+  }
+}
+
+@keyframes neural-pulse {
+  0% {
+    opacity: 0.34;
+  }
+  50% {
+    opacity: 0.46;
+  }
+  100% {
+    opacity: 0.34;
+  }
+}
+
+/* Content stays above background layers */
+#__next,
+body > div,
+main,
+aside,
+header {
+  position: relative;
+  z-index: 1;
+}
+
+/* Premium glass helpers */
+.glass {
+  position: relative;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(8px);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(
+    900px 220px at 18% 0%,
+    rgba(255, 255, 255, 0.10),
+    transparent 60%
+  );
+  opacity: 0.65;
+}
+
+/* Glow hover — no permanent GPU layer; browser promotes on demand */
+.glow-hover {
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 55ms ease-out,
+    border-color 55ms ease-out,
+    box-shadow 55ms ease-out;
+}
+
+.glow-hover::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 55ms ease-out;
+  background: radial-gradient(
+    700px 220px at 20% 0%,
+    rgba(168, 85, 247, 0.32),
+    transparent 60%
+  );
+}
+
+/* Promote to GPU layer only while hovered — not permanently */
+.glow-hover:hover {
+  will-change: transform;
+  transform: translateY(-1px) scale(1.006);
+  border-color: rgba(168, 85, 247, 0.38);
+  box-shadow:
+    0 12px 35px rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(168, 85, 247, 0.18),
+    0 0 45px rgba(168, 85, 247, 0.18);
+}
+
+.glow-hover:hover::after {
+  opacity: 1;
+}
+
+/* Neural background reacts to hovered cards — opacity only, no filter
+   repaint (saturate() forced a full compositor update on every hover).  */
+body:has(.pulse-trigger:hover)::after {
+  opacity: 0.52;
+}
+
+@keyframes drawLine {
+  from {
+    stroke-dashoffset: 2000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes fadePoint {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fill-bar {
+  from { width: 0% }
+  to   { width: 100% }
+}
+
+/* ══════════════════════════════════════════════════════════
+   LIGHT MODE OVERRIDES
+   Applied when <html data-theme="light"> is set.
+
+   Core strategy: Tailwind v4 generates opacity variants as
+     color-mix(in oklab, var(--color-white) X%, transparent)
+   so overriding --color-white and --color-black flips ALL
+   white/black opacity classes at once (text-white/60,
+   bg-white/5, border-white/10, bg-black/60, etc.).
+   No per-class selectors needed for those.
+══════════════════════════════════════════════════════════ */
+
+html[data-theme="light"] {
+  /* Tailwind palette variables — flip white↔dark, black↔light */
+  --color-white: #0f0e1a;
+  --color-black: #f0eeff;
+
+  /* App-level variables */
+  --background: #f0eeff;
+  --foreground: #0f0e1a;
+  --dropdown-bg: rgba(250, 249, 255, 0.98);
+  --dropdown-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
+
+  color-scheme: light;
+}
+
+/* ── Body: soft lavender clinical background ─────────────── */
+html[data-theme="light"] body {
+  background:
+    radial-gradient(1100px 700px at 20% -2%,  rgba(168, 85,  247, 0.09), transparent 50%),
+    radial-gradient(900px  600px at 85%  5%,  rgba(16,  185, 129, 0.06), transparent 50%),
+    radial-gradient(800px  700px at 52%  55%, rgba(59,  130, 246, 0.06), transparent 55%),
+    radial-gradient(700px  500px at 8%   88%, rgba(79,  70,  229, 0.08), transparent 55%),
+    radial-gradient(600px  450px at 92%  90%, rgba(139, 92,  246, 0.06), transparent 50%),
+    #f0eeff;
+  color: #0f0e1a;
+}
+
+/* Grain: nearly invisible */
+html[data-theme="light"] body::before {
+  opacity: 0.04;
+  mix-blend-mode: multiply;
+}
+
+/* Neural grid: multiply blend → pencil-sketch feel on light bg */
+html[data-theme="light"] body::after {
+  opacity: 0.12;
+  mix-blend-mode: multiply;
+}
+
+html[data-theme="light"] body:has(.pulse-trigger:hover)::after {
+  opacity: 0.20;
+  filter: blur(0.08px) saturate(1.1);
+}
+
+/* ── Glass cards: frosted white panels ───────────────────── */
+html[data-theme="light"] .glass {
+  background: rgba(255, 255, 255, 0.80);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+html[data-theme="light"] .glass::before {
+  background: radial-gradient(900px 220px at 18% 0%, rgba(255, 255, 255, 0.60), transparent 60%);
+}
+
+/* Glow hover: lighter shadow on white surface */
+html[data-theme="light"] .glow-hover:hover {
+  border-color: rgba(168, 85, 247, 0.30);
+  box-shadow:
+    0 12px 35px rgba(0, 0, 0, 0.10),
+    0 0 0 1px rgba(168, 85, 247, 0.15),
+    0 0 45px rgba(168, 85, 247, 0.12);
+}
+
+/* ── Sidebar & Topbar: explicit because they use rgba() bg ── */
+html[data-theme="light"] aside {
+  background: rgba(244, 242, 255, 0.94) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+html[data-theme="light"] header {
+  background: rgba(250, 249, 255, 0.90) !important;
+  border-color: rgba(0, 0, 0, 0.07) !important;
+}
+
+/* ── Washed-out colour tokens: richer on light surfaces ───── */
+/* Palette colors don't go through --color-white, so each     */
+/* utility class needs an individual rule.                    */
+html[data-theme="light"] .text-red-200     { color: #dc2626; }
+html[data-theme="light"] .text-red-300     { color: #dc2626; }
+html[data-theme="light"] .text-red-400     { color: #dc2626; }
+html[data-theme="light"] .text-amber-200   { color: #d97706; }
+html[data-theme="light"] .text-amber-300   { color: #d97706; }
+html[data-theme="light"] .text-amber-400   { color: #b45309; }
+html[data-theme="light"] .text-cyan-200    { color: #0284c7; }
+html[data-theme="light"] .text-cyan-300    { color: #0891b2; }
+html[data-theme="light"] .text-cyan-400    { color: #0891b2; }
+html[data-theme="light"] .text-emerald-300 { color: #059669; }
+html[data-theme="light"] .text-emerald-400 { color: #059669; }
+html[data-theme="light"] .text-green-400   { color: #16a34a; }
+html[data-theme="light"] .text-blue-400     { color: #2563eb; }
+html[data-theme="light"] .text-blue-300     { color: #1d4ed8; }
+html[data-theme="light"] .text-purple-200  { color: #7c3aed; }
+html[data-theme="light"] .text-purple-300  { color: #7c3aed; }
+html[data-theme="light"] .text-purple-400  { color: #6d28d9; }
+
+/* ── MRI scan preview: always dark (brain scan aesthetic) ─────── */
+html[data-theme="light"] [data-mri-preview] {
+  background: #09090f !important;
+  border-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+/* ── Select / option dropdowns ───────────────────────────────── */
+html[data-theme="light"] select {
+  background-color: rgba(15, 14, 26, 0.05) !important;
+  color: #0f0e1a !important;
+}
+html[data-theme="light"] select option {
+  background-color: #faf9ff !important;
+  color: #0f0e1a !important;
+}
+
+/* ── Sidebar active pill: noticeable purple on white bg ─────── */
+html[data-theme="light"] aside [data-active="true"] {
+  background: rgba(124, 58, 237, 0.10) !important;
+  border-color: rgba(124, 58, 237, 0.22) !important;
+  color: #5b21b6 !important;
+}
+
+html[data-theme="light"] aside [data-active="true"] [data-active-icon] {
+  background: rgba(124, 58, 237, 0.12) !important;
+  border-color: rgba(124, 58, 237, 0.28) !important;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────── */
+html[data-theme="light"] ::-webkit-scrollbar            { width: 6px; height: 6px; }
+html[data-theme="light"] ::-webkit-scrollbar-track      { background: transparent; }
+html[data-theme="light"] ::-webkit-scrollbar-thumb      { background: rgba(0,0,0,0.16); border-radius: 99px; }
+html[data-theme="light"] ::-webkit-scrollbar-thumb:hover{ background: rgba(0,0,0,0.28); }
+
+/* ── Command palette: override hardcoded dark bg ────────────── */
+html[data-theme="light"] [data-cp-panel] {
+  background: rgba(250, 249, 255, 0.98) !important;
+  border-color: rgba(0, 0, 0, 0.09) !important;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06) !important;
+}
+
+html[data-theme="light"] [data-cp-backdrop] {
+  background: rgba(15, 14, 26, 0.32) !important;
+}
+
+/* ── Heatmap region separators: visible on white bg ─────────── */
+html[data-theme="light"] [data-heatmap-col] {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* ── Heatmap tooltip: readable on light bg ───────────────────── */
+html[data-theme="light"] [data-heatmap-tooltip] {
+  background: rgba(250, 249, 255, 0.98) !important;
+  border-color: rgba(0, 0, 0, 0.10) !important;
+  color: #0f0e1a !important;
+}
+
+/* ── Dashboard hover preview panel ──────────────────────────── */
+html[data-theme="light"] [data-hover-preview] {
+  background: rgba(252, 251, 255, 0.98) !important;
+  border-color: rgba(0, 0, 0, 0.09) !important;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.12) !important;
+}

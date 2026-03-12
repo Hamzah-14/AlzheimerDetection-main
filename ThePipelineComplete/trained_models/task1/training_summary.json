@@ -1,0 +1,44 @@
+{
+  "task": "Task1_AD_vs_CN",
+  "task_desc": "AD vs CN",
+  "architecture": "stacking",
+  "base_models": [
+    "LogReg_L1",
+    "XGBoost",
+    "LightGBM"
+  ],
+  "n_samples": 2111,
+  "n_features": 120,
+  "classes": [
+    "AD",
+    "NC"
+  ],
+  "cv_results": {
+    "auc_mean": 0.9030825431741605,
+    "auc_std": 0.03177550151261708,
+    "f1_mean": 0.8283409916488033,
+    "f1_std": 0.04682328478768096,
+    "bal_acc": 0.8416898976433179,
+    "confusion_matrix": [
+      [
+        531,
+        114
+      ],
+      [
+        205,
+        1261
+      ]
+    ],
+    "recall_AD": 0.8232558139534883,
+    "recall_NC": 0.8601637107776262
+  },
+  "trained_on": "2026-03-11 19:55:19",
+  "linear_models_need_scaling": [
+    "LogReg_L1",
+    "SGD_log",
+    "Ridge",
+    "SVM_RBF",
+    "ElasticNet"
+  ],
+  "inference_note": "To predict: impute \u2192 scale (for linear models) \u2192 base model predict_proba \u2192 concatenate \u2192 meta_learner predict_proba"
+}

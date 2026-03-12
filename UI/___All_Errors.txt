@@ -1,0 +1,31 @@
+CorrelationId: 26d77652-1dd6-4039-bf63-87dbfe55c16b
+UTC DateTime: 03/12/2026 11:46:23
+
+The following files/folders have not been downloaded
+0. frontend/node_modules/next/dist/client/legacy
+1. frontend/node_modules/next/dist/client/lib
+2. frontend/node_modules/next/dist/client/portal
+3. frontend/node_modules/next/dist/client/react-client-callbacks
+4. frontend/node_modules/next/dist/client/request
+5. frontend/node_modules/next/dist/client/tracing
+6. frontend/node_modules/next/dist/compiled
+7. frontend/node_modules/next/dist/diagnostics
+8. frontend/node_modules/next/dist/esm
+9. frontend/node_modules/next/dist/experimental
+10. frontend/node_modules/next/dist/export
+11. frontend/node_modules/next/dist/lib
+12. frontend/node_modules/next/dist/next-devtools
+13. frontend/node_modules/next/dist/pages
+14. frontend/node_modules/next/dist/server
+15. frontend/node_modules/next/dist/shared
+16. frontend/node_modules/next/dist/styled-jsx
+17. frontend/node_modules/next/dist/telemetry
+18. frontend/node_modules/next/dist/trace
+19. frontend/node_modules/next/experimental
+20. frontend/node_modules/next/font
+21. frontend/node_modules/next/image-types
+22. frontend/node_modules/next/legacy
+23. frontend/node_modules/next/navigation-types
+24. frontend/node_modules/next/next-swc-fallback
+25. frontend/node_modules/next/node_modules
+26. frontend/node_modules/next/types

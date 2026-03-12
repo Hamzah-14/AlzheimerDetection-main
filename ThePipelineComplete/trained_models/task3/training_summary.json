@@ -1,0 +1,44 @@
+{
+  "task": "Task3_CN_vs_MCI",
+  "task_desc": "CN vs MCI",
+  "architecture": "stacking",
+  "base_models": [
+    "LogReg_L1",
+    "LightGBM",
+    "SGD_log"
+  ],
+  "n_samples": 2784,
+  "n_features": 120,
+  "classes": [
+    "MCI",
+    "NC"
+  ],
+  "cv_results": {
+    "auc_mean": 0.8030187823699938,
+    "auc_std": 0.023073455783216786,
+    "f1_mean": 0.7230232660294168,
+    "f1_std": 0.03534013629491111,
+    "bal_acc": 0.7230939088484698,
+    "confusion_matrix": [
+      [
+        936,
+        382
+      ],
+      [
+        387,
+        1079
+      ]
+    ],
+    "recall_MCI": 0.7101669195751138,
+    "recall_NC": 0.7360163710777626
+  },
+  "trained_on": "2026-03-11 20:00:01",
+  "linear_models_need_scaling": [
+    "LogReg_L1",
+    "SGD_log",
+    "Ridge",
+    "SVM_RBF",
+    "ElasticNet"
+  ],
+  "inference_note": "To predict: impute \u2192 scale (for linear models) \u2192 base model predict_proba \u2192 concatenate \u2192 meta_learner predict_proba"
+}

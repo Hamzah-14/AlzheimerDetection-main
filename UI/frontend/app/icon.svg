@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Background -->
+  <rect width="32" height="32" rx="8" fill="#0f0e1a"/>
+
+  <!-- Synaptic arms -->
+  <line x1="16" y1="12" x2="16" y2="5.5"  stroke="#a855f7" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="12.8" y1="13.5" x2="7.5" y2="9.2"  stroke="#a855f7" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="19.2" y1="13.5" x2="24.5" y2="9.2"  stroke="#a855f7" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="16" y1="20" x2="16" y2="26.5" stroke="#a855f7" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="12.8" y1="18.5" x2="7.5" y2="22.8" stroke="#a855f7" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="19.2" y1="18.5" x2="24.5" y2="22.8" stroke="#a855f7" stroke-width="1.6" stroke-linecap="round"/>
+
+  <!-- Terminal nodes -->
+  <circle cx="16"   cy="4.5"  r="2"   fill="#c084fc"/>
+  <circle cx="6.5"  cy="8.2"  r="1.8" fill="#9333ea"/>
+  <circle cx="25.5" cy="8.2"  r="1.8" fill="#9333ea"/>
+  <circle cx="16"   cy="27.5" r="2"   fill="#c084fc"/>
+  <circle cx="6.5"  cy="23.8" r="1.8" fill="#9333ea"/>
+  <circle cx="25.5" cy="23.8" r="1.8" fill="#9333ea"/>
+
+  <!-- Central nucleus -->
+  <circle cx="16" cy="16" r="5" fill="#7c3aed"/>
+  <circle cx="16" cy="16" r="3" fill="#a855f7"/>
+  <circle cx="16" cy="16" r="1.4" fill="#e9d5ff"/>
+</svg>

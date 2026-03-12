@@ -1,0 +1,44 @@
+{
+  "task": "Task2_stable_vs_converting",
+  "task_desc": "Stable vs Converting MCI",
+  "architecture": "stacking",
+  "base_models": [
+    "RandomForest",
+    "LogReg_L1",
+    "XGBoost"
+  ],
+  "n_samples": 170,
+  "n_features": 592,
+  "classes": [
+    "converting_MCI",
+    "stable_MCI"
+  ],
+  "cv_results": {
+    "auc_mean": 0.7792324561403509,
+    "auc_std": 0.08848230656434165,
+    "f1_mean": 0.7197226332626777,
+    "f1_std": 0.07730609356846545,
+    "bal_acc": 0.7230336257309942,
+    "confusion_matrix": [
+      [
+        67,
+        25
+      ],
+      [
+        22,
+        56
+      ]
+    ],
+    "recall_converting_MCI": 0.7282608695652174,
+    "recall_stable_MCI": 0.717948717948718
+  },
+  "trained_on": "2026-03-11 19:57:51",
+  "linear_models_need_scaling": [
+    "LogReg_L1",
+    "SGD_log",
+    "Ridge",
+    "SVM_RBF",
+    "ElasticNet"
+  ],
+  "inference_note": "To predict: impute \u2192 scale (for linear models) \u2192 base model predict_proba \u2192 concatenate \u2192 meta_learner predict_proba"
+}
