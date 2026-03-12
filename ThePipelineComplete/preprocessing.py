@@ -318,7 +318,6 @@ def quantize_crops(crops: np.ndarray) -> np.ndarray:
 
     return np.stack([q0, q1], axis=0)
 
-
 def crops_to_bin_bytes(crops_quantized: np.ndarray) -> bytes:
     """
     Converts quantized crops to raw .bin byte format in memory.
