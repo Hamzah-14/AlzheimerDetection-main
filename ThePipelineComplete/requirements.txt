@@ -1,0 +1,18 @@
+# ── Web server ────────────────────────────────────────────────────────────────
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+python-multipart>=0.0.9       # required for FastAPI File/Form uploads
+
+# ── MRI preprocessing ─────────────────────────────────────────────────────────
+antspyx>=0.4.2                # ANTsPy — N4 correction + registration
+nibabel>=5.2.0                # NIfTI I/O
+nilearn>=0.10.3               # Harvard-Oxford atlas fetch
+
+# ── Numerics ──────────────────────────────────────────────────────────────────
+numpy>=1.26.0
+scipy>=1.13.0
+
+# ── ML ────────────────────────────────────────────────────────────────────────
+scikit-learn>=1.4.0
+xgboost>=2.0.0
+lightgbm>=4.3.0

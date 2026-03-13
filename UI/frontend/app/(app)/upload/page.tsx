@@ -12,19 +12,21 @@ import {
 import { usePageTitle } from "@/lib/use-page-title";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type PipelineStage = { label: string; sub: string; icon: React.ElementType; duration: number; fpga?: boolean };
+type PipelineStage = { label: string; sub: string; icon: React.ElementType; fpga?: boolean };
 type ScanEntry     = { id: number; file: File | null; date: Date | null };
 type CalView       = "day" | "month" | "year";
 type WizardStep    = 1 | 2 | 3;
-type PipelineState = "idle" | "running" | "done";
+type PipelineState = "idle" | "running" | "done" | "error";
+
+const BACKEND_URL = "http://localhost:8000";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const STAGES: PipelineStage[] = [
-  { label: "Upload",       sub: "MRI volume received and registered",            icon: Scan,     duration: 700  },
-  { label: "Preprocess",   sub: "NumPy conversion · bilateral hippocampal crop", icon: Cpu,      duration: 1400 },
-  { label: "Radiomics",    sub: "3D GLCM feature extraction on PYNQ-Z2",         icon: Zap,      duration: 2100, fpga: true },
-  { label: "Classify",     sub: "SVM / RF classifier inference",                 icon: Brain,    duration: 900  },
-  { label: "Report Ready", sub: "Clinical summary generated",                    icon: FileText, duration: 500  },
+  { label: "Upload",       sub: "MRI volume received and validated",             icon: Scan                    },
+  { label: "Preprocess",   sub: "N4 correction · MNI registration · crop",       icon: Cpu                     },
+  { label: "Radiomics",    sub: "3D GLCM feature extraction on PYNQ-Z2",         icon: Zap,      fpga: true    },
+  { label: "Classify",     sub: "Stacking ensemble · cascade inference",          icon: Brain                   },
+  { label: "Report Ready", sub: "Clinical summary generated",                    icon: FileText                },
 ];
 
 const MONTHS_S  = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -346,13 +348,15 @@ export default function UploadPage() {
   const [pipelineState,   setPipelineState]   = useState<PipelineState>("idle");
   const [activeStage,     setActiveStage]     = useState(-1);
   const [completedStages, setCompletedStages] = useState<number[]>([]);
+  const [pipelineResult, setPipelineResult] = useState<Record<string, unknown> | null>(null);
+  const [pipelineError,  setPipelineError]  = useState<string | null>(null);
   const caseId = "AUD-0232";
   const region = "Bilateral Hippocampus";
 
   // Validation
   const step1Valid = scans.length >= 2 && scans.slice(0, 2).every(s => s.file && s.date);
   const step2Valid = !!age && Number(age) > 0 && !!sex && !!education && Number(education) > 0 && !!race;
-  const step3Valid = !!apoe && !!abeta42 && !!tau && !!ptau;
+  const step3Valid = true; // all biomarkers optional — model imputes missing values
 
   // Scan helpers
   const updateFile = (id: number, file: File) => setScans(s => s.map(sc => sc.id === id ? { ...sc, file } : sc));
@@ -361,21 +365,91 @@ export default function UploadPage() {
   const removeScan = (id: number) => setScans(s => s.filter(sc => sc.id !== id));
   const gapMonths  = (a: Date, b: Date) => (b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24 * 30.44);
 
-  // Pipeline
-  const runPipeline = () => {
+  // Pipeline — calls real FastAPI backend
+  const runPipeline = async () => {
     if (pipelineState === "running") return;
     setPipelineState("running");
     setActiveStage(0);
     setCompletedStages([]);
-    let elapsed = 0;
-    STAGES.forEach((stage, i) => {
-      setTimeout(() => setActiveStage(i), elapsed);
-      elapsed += stage.duration;
-      setTimeout(() => {
-        setCompletedStages(prev => [...prev, i]);
-        if (i === STAGES.length - 1) { setPipelineState("done"); setActiveStage(-1); }
-      }, elapsed);
-    });
+    setPipelineResult(null);
+    setPipelineError(null);
+
+    try {
+      // Build multipart form
+      const form = new FormData();
+      const sortedScans = [...scans.filter(s => s.file && s.date)]
+        .sort((a, b) => a.date!.getTime() - b.date!.getTime());
+
+      sortedScans.forEach(s => form.append("scans", s.file!));
+      form.append("scan_dates", JSON.stringify(
+        sortedScans.map(s => s.date!.toISOString().split("T")[0])
+      ));
+      form.append("age",       age);
+      form.append("sex",       sex ?? "");
+      form.append("education", education);
+      form.append("race",      race);
+      form.append("apoe",      apoe);
+      form.append("abeta42",   abeta42);
+      form.append("tau",       tau);
+      form.append("ptau",      ptau);
+
+      // Submit job
+      const res = await fetch(`${BACKEND_URL}/analyze`, { method: "POST", body: form });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail ?? "Server error");
+      }
+      const { job_id } = await res.json();
+
+      // Stream progress via SSE
+      const evtSource = new EventSource(`${BACKEND_URL}/analyze/${job_id}/stream`);
+
+      evtSource.addEventListener("stage", (e) => {
+        const { index, status } = JSON.parse(e.data);
+        if (status === "complete") {
+          setCompletedStages(prev => Array.from(new Set([...prev, index])));
+          if (index + 1 < STAGES.length) setActiveStage(index + 1);
+        } else if (status === "active") {
+          setActiveStage(index);
+        }
+      });
+
+      evtSource.addEventListener("result", (e) => {
+        const payload = JSON.parse(e.data);
+        setPipelineResult(payload.data);
+        setPipelineState("done");
+        setActiveStage(-1);
+        evtSource.close();
+      });
+
+      evtSource.addEventListener("error", (e) => {
+        // SSE error event from server (pipeline failure)
+        try {
+          const payload = JSON.parse((e as MessageEvent).data);
+          setPipelineError(payload.message ?? "Pipeline failed");
+        } catch {
+          setPipelineError("Pipeline failed — check server logs");
+        }
+        setPipelineState("error");
+        setActiveStage(-1);
+        evtSource.close();
+      });
+
+      evtSource.onerror = () => {
+        // Network-level SSE error
+        if (pipelineState === "running") {
+          setPipelineError("Lost connection to server");
+          setPipelineState("error");
+          setActiveStage(-1);
+        }
+        evtSource.close();
+      };
+
+    } catch (err: unknown) {
+      setPipelineError(err instanceof Error ? err.message : String(err));
+      setPipelineState("error");
+      setActiveStage(-1);
+    }
   };
 
   const stageStatus = (i: number) =>
@@ -737,6 +811,8 @@ export default function UploadPage() {
                     <><CircleDashed className="h-4 w-4 animate-spin" /> Running pipeline…</>
                   ) : pipelineState === "done" ? (
                     <><CheckCircle2 className="h-4 w-4 text-emerald-400" /> Complete — run again</>
+                  ) : pipelineState === "error" ? (
+                    <><Zap className="h-4 w-4" /> Retry Analysis</>
                   ) : (
                     <><Zap className="h-4 w-4" /> Run Analysis Pipeline</>
                   )}
@@ -832,6 +908,47 @@ export default function UploadPage() {
               Complete all steps above to begin the analysis pipeline.
             </p>
           )}
+
+          {pipelineState === "error" && pipelineError && (
+            <div className="mt-4 rounded-2xl border border-red-400/20 bg-red-400/[0.06] p-4">
+              <div className="mb-1 text-xs font-medium text-red-300">Pipeline error</div>
+              <div className="text-[11px] text-red-300/70 font-mono break-all">{pipelineError}</div>
+            </div>
+          )}
+
+          {pipelineState === "done" && pipelineResult && (() => {
+            const final = pipelineResult.final as Record<string, unknown> | undefined;
+            if (!final) return null;
+            const pred = final.prediction as string;
+            const conf = final.confidence as number;
+            const convRisk = final.conversion_risk as number | undefined;
+            const isAD  = pred?.includes("Alzheimer");
+            const isCN  = pred?.includes("Normal");
+            const isMCI = pred?.includes("MCI");
+            const color = isAD ? "red" : isCN ? "cyan" : "amber";
+            const colorClass = isAD
+              ? "border-red-400/20 bg-red-400/[0.06] text-red-200"
+              : isCN
+              ? "border-cyan-400/20 bg-cyan-400/[0.06] text-cyan-200"
+              : "border-amber-400/20 bg-amber-400/[0.06] text-amber-200";
+            return (
+              <div className={`mt-4 rounded-2xl border p-4 space-y-3 ${colorClass}`}>
+                <div className="text-xs font-medium opacity-70">Classification Result</div>
+                <div className="text-lg font-semibold">{pred}</div>
+                <div className="text-xs opacity-70">
+                  Confidence: {conf !== undefined ? `${(conf * 100).toFixed(1)}%` : "—"}
+                </div>
+                {convRisk !== undefined && (
+                  <div className="text-xs opacity-70">
+                    Conversion risk: {(convRisk * 100).toFixed(1)}%
+                  </div>
+                )}
+                <div className="text-[10px] opacity-50">
+                  Stopped at: {final.cascade_stopped_at as string}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>

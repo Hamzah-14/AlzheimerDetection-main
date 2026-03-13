@@ -35,11 +35,12 @@ def load_task_artifacts(task_key):
     task      = TASKS[task_key]
     model_dir = task["model_dir"]
 
-    # task1 and task3 are scan-level, task2 is subject-level
+    # task1 and task3 are scan-level, task2 is subject-level.
+    # Each task reads its OWN feature list from its own model_dir.
     if task_key in ("task1", "task3"):
-        feature_list_path = "ThePipelineComplete/trained_models/task3/survived_features_scan_level.txt"
+        feature_list_path = f"{model_dir}/survived_features_scan_level.txt"
     else:
-        feature_list_path = "ThePipelineComplete/trained_models/task2/survived_features_subject_level.txt"
+        feature_list_path = f"{model_dir}/survived_features_subject_level.txt"
 
     with open(feature_list_path, "r") as f:
         feature_list = [l.strip() for l in f if l.strip()]
