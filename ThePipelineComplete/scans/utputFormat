@@ -1,0 +1,6 @@
+HTTP/1.1 307 Temporary Redirect
+date: Fri, 13 Mar 2026 12:44:12 GMT
+server: uvicorn
+content-length: 0
+location: http://localhost:8000/analyze
+
