@@ -10,6 +10,8 @@ import {
   Info, Plus, X, Calendar,
 } from "lucide-react";
 import { usePageTitle } from "@/lib/use-page-title";
+import { runAnalysis } from "@/lib/uploadHandler";
+import { useAnalysisStore } from "@/lib/analysis-store";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type PipelineStage = { label: string; sub: string; icon: React.ElementType; fpga?: boolean };
@@ -18,7 +20,6 @@ type CalView       = "day" | "month" | "year";
 type WizardStep    = 1 | 2 | 3;
 type PipelineState = "idle" | "running" | "done" | "error";
 
-const BACKEND_URL = "http://localhost:8000";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const STAGES: PipelineStage[] = [
@@ -365,7 +366,9 @@ export default function UploadPage() {
   const removeScan = (id: number) => setScans(s => s.filter(sc => sc.id !== id));
   const gapMonths  = (a: Date, b: Date) => (b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24 * 30.44);
 
-  // Pipeline — calls real FastAPI backend
+  // Pipeline — delegates to uploadHandler.ts
+  const addCase = useAnalysisStore((s) => s.addCase);
+
   const runPipeline = async () => {
     if (pipelineState === "running") return;
     setPipelineState("running");
@@ -374,82 +377,47 @@ export default function UploadPage() {
     setPipelineResult(null);
     setPipelineError(null);
 
-    try {
-      // Build multipart form
-      const form = new FormData();
-      const sortedScans = [...scans.filter(s => s.file && s.date)]
-        .sort((a, b) => a.date!.getTime() - b.date!.getTime());
+    const scanEntries = scans
+      .filter((s) => s.file && s.date)
+      .map((s) => ({
+        file: s.file!,
+        date: s.date!.toISOString().split("T")[0],
+      }));
 
-      sortedScans.forEach(s => form.append("scans", s.file!));
-      form.append("scan_dates", JSON.stringify(
-        sortedScans.map(s => s.date!.toISOString().split("T")[0])
-      ));
-      form.append("age",       age);
-      form.append("sex",       sex ?? "");
-      form.append("education", education);
-      form.append("race",      race);
-      form.append("apoe",      apoe);
-      form.append("abeta42",   abeta42);
-      form.append("tau",       tau);
-      form.append("ptau",      ptau);
-
-      // Submit job
-      const res = await fetch(`${BACKEND_URL}/analyze`, { method: "POST", body: form });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: res.statusText }));
-        throw new Error(err.detail ?? "Server error");
-      }
-      const { job_id } = await res.json();
-
-      // Stream progress via SSE
-      const evtSource = new EventSource(`${BACKEND_URL}/analyze/${job_id}/stream`);
-
-      evtSource.addEventListener("stage", (e) => {
-        const { index, status } = JSON.parse(e.data);
-        if (status === "complete") {
-          setCompletedStages(prev => Array.from(new Set([...prev, index])));
-          if (index + 1 < STAGES.length) setActiveStage(index + 1);
-        } else if (status === "active") {
-          setActiveStage(index);
-        }
-      });
-
-      evtSource.addEventListener("result", (e) => {
-        const payload = JSON.parse(e.data);
-        setPipelineResult(payload.data);
-        setPipelineState("done");
-        setActiveStage(-1);
-        evtSource.close();
-      });
-
-      evtSource.addEventListener("error", (e) => {
-        // SSE error event from server (pipeline failure)
-        try {
-          const payload = JSON.parse((e as MessageEvent).data);
-          setPipelineError(payload.message ?? "Pipeline failed");
-        } catch {
-          setPipelineError("Pipeline failed — check server logs");
-        }
-        setPipelineState("error");
-        setActiveStage(-1);
-        evtSource.close();
-      });
-
-      evtSource.onerror = () => {
-        // Network-level SSE error
-        if (pipelineState === "running") {
-          setPipelineError("Lost connection to server");
+    await runAnalysis(
+      scanEntries,
+      {
+        age:       Number(age),
+        sex:       sex ?? "M",
+        education: Number(education),
+        race,
+        apoe:      apoe    || undefined,
+        abeta42:   abeta42 ? Number(abeta42) : undefined,
+        tau:       tau     ? Number(tau)     : undefined,
+        ptau:      ptau    ? Number(ptau)    : undefined,
+      },
+      {
+        onStage: (index, status) => {
+          if (status === "complete") {
+            setCompletedStages((prev) => Array.from(new Set([...prev, index])));
+            if (index + 1 < STAGES.length) setActiveStage(index + 1);
+          } else {
+            setActiveStage(index);
+          }
+        },
+        onResult: (analysisCase) => {
+          addCase(analysisCase);
+          setPipelineResult(analysisCase.result as Record<string, unknown>);
+          setPipelineState("done");
+          setActiveStage(-1);
+        },
+        onError: (message) => {
+          setPipelineError(message);
           setPipelineState("error");
           setActiveStage(-1);
-        }
-        evtSource.close();
-      };
-
-    } catch (err: unknown) {
-      setPipelineError(err instanceof Error ? err.message : String(err));
-      setPipelineState("error");
-      setActiveStage(-1);
-    }
+        },
+      }
+    );
   };
 
   const stageStatus = (i: number) =>
