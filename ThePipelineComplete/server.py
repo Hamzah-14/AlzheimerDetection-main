@@ -96,6 +96,20 @@ def _compute_ncc(template_np: np.ndarray, registered_np: np.ndarray) -> tuple:
         return 0.0, n_voxels
     return float((f * m).sum() / denom), n_voxels
 
+# ── Feature importances (precomputed by Feature_Importance.py) ───────────────
+_FEATURE_IMPORTANCES: dict = {}
+
+def _load_feature_importances():
+    path = BASE_DIR / "trained_models" / "feature_importances.json"
+    if path.exists():
+        global _FEATURE_IMPORTANCES
+        _FEATURE_IMPORTANCES = json.loads(path.read_text())
+        print(f"[server] Feature importances loaded for: {list(_FEATURE_IMPORTANCES.keys())}")
+    else:
+        print(f"[server] feature_importances.json not found — run Feature_Importance.py first")
+
+_load_feature_importances()
+
 # ── Job store (in-memory, single process) ─────────────────────────────────────
 # Each job_id → dict with keys: status, stages, result, error
 _jobs: dict[str, dict[str, Any]] = {}
@@ -284,6 +298,19 @@ def _run_pipeline(
         }
 
         results["glcm_summary"] = glcm_summary
+
+        # Attach precomputed feature importances filtered to the cascade path taken
+        cascade_stopped = results.get("final", {}).get("cascade_stopped_at", "task3")
+        tasks_run = ["task1"]
+        if cascade_stopped in ("task3", "task2"):
+            tasks_run.append("task3")
+        if cascade_stopped == "task2":
+            tasks_run.append("task2")
+        results["feature_importances"] = {
+            task: _FEATURE_IMPORTANCES.get(task, {}).get("top_features", [])
+            for task in tasks_run
+        }
+
         _emit(job_id, "result", {"status": "success", "data": _clean(results)})
         _jobs[job_id]["status"] = "done"
         _jobs[job_id]["result"] = results
