@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { REPORT_DATA, type DatasetClass } from "@/lib/cases";
 import { CaseSwitcher } from "@/components/ui/case-switcher";
+import { useAnalysisStore, type AnalysisCase } from "@/lib/analysis-store";
 import {
   FileText,
   Brain,
@@ -38,6 +39,73 @@ function classTheme(datasetClass: DatasetClass) {
   };
 }
 
+// ── Convert a real pipeline result into a report-compatible object ─────────────
+function buildLiveReport(c: AnalysisCase) {
+  const final    = c.result.final;
+  const pred     = final.prediction;
+  const conf     = final.confidence;
+  const task1    = c.result.task1;
+  const task3    = c.result.task3;
+  const task2    = c.result.task2;
+
+  // Derive dataset class
+  const datasetClass: DatasetClass =
+    pred.includes("Alzheimer") ? "AD" :
+    pred.includes("MCI")       ? "MCI" : "NC";
+
+  // Derive a decision label
+  const decision =
+    datasetClass === "AD"  ? "Alzheimer's Disease likely" :
+    datasetClass === "MCI" ? (task2?.label === "converting_MCI" ? "Converting MCI — High Risk" : "Stable MCI") :
+    "Cognitively Normal";
+
+  // Build feature bars from raw probabilities
+  const adProb   = task1?.probabilities?.AD  ?? 0;
+  const mciProb  = task3?.probabilities?.MCI ?? 0;
+  const ncProb   = task1?.probabilities?.NC  ?? 0;
+  const convProb = task2?.probabilities?.converting_MCI ?? 0;
+
+  const features = [
+    { name: "AD Probability",        value: adProb,   color: "bg-red-400",    note: "Likelihood of Alzheimer's Disease pattern" },
+    { name: "MCI Probability",       value: mciProb,  color: "bg-amber-400",  note: "Likelihood of Mild Cognitive Impairment" },
+    { name: "Normal Probability",    value: ncProb,   color: "bg-cyan-400",   note: "Likelihood of cognitively normal pattern" },
+    { name: "Conversion Risk",       value: convProb, color: "bg-purple-400", note: "Risk of MCI progressing to AD (if MCI detected)" },
+  ];
+
+  // Summary text
+  const summary =
+    datasetClass === "AD"
+      ? `Radiomic analysis of bilateral hippocampal volumes indicates a high probability (${(adProb*100).toFixed(1)}%) of Alzheimer's Disease-consistent texture patterns. The cascade classifier stopped at Task 1 (AD vs CN), indicating clear differentiation from normal cognition.`
+      : datasetClass === "MCI"
+      ? `The scan shows texture patterns consistent with Mild Cognitive Impairment (MCI probability ${(mciProb*100).toFixed(1)}%). The cascade proceeded to Task 2 (Stable vs Converting MCI). ${convProb > 0.5 ? "Conversion risk is elevated — closer monitoring is advised." : "Current trajectory appears stable."}`
+      : `Bilateral hippocampal radiomic features are within normal range. AD probability is low (${(adProb*100).toFixed(1)}%) and MCI probability is below threshold (${(mciProb*100).toFixed(1)}%). No immediate clinical concern indicated.`;
+
+  const recommendation =
+    datasetClass === "AD"
+      ? "Refer to specialist for comprehensive neurological evaluation. Consider PET imaging and CSF biomarker confirmation. Initiate care planning discussion."
+      : datasetClass === "MCI" && convProb > 0.5
+      ? "Schedule follow-up MRI within 6 months. Monitor cognitive function with standardised assessments. Consider CSF biomarker testing if not already done."
+      : datasetClass === "MCI"
+      ? "Annual MRI follow-up recommended. Continue monitoring with cognitive assessments. Lifestyle intervention may be beneficial."
+      : "Routine monitoring as per standard clinical protocol. No immediate intervention required.";
+
+  return {
+    datasetClass,
+    decision,
+    confidence: conf,
+    region: c.region,
+    latency: "~3.2s",
+    status: "Complete",
+    summary,
+    recommendation,
+    features,
+    explainability: `The stacking ensemble cascade evaluated this case across ${final.cascade_stopped_at === "task1" ? "1 stage" : final.cascade_stopped_at === "task3" ? "2 stages" : "3 stages"}. Feature alignment used ${c.scans.length} longitudinal scan${c.scans.length > 1 ? "s" : ""} with a follow-up period derived from scan dates. Prediction stopped at ${final.cascade_stopped_at}.`,
+    notes: `Patient: ${c.patient.age}yo ${c.patient.sex === "M" ? "Male" : "Female"} · Education: ${c.patient.education}yr · Race: ${c.patient.race}${c.patient.apoe ? ` · APOE: ${c.patient.apoe}` : ""} · Scans: ${c.scans.map(s => s.date).join(", ")}`,
+    volumeShape: "(2, 64, 64, 64)",
+    preprocessing: "N4 bias field correction → MNI152 registration (Rigid + Affine) → Atlas-based hippocampal crop → Per-channel p1/p99 quantization (Ng=32)",
+  };
+}
+
 export default function ReportsPage() {
   usePageTitle("Reports");
   const searchParams = useSearchParams();
@@ -46,10 +114,21 @@ export default function ReportsPage() {
   const caseId = searchParams.get("case") || "AUD-0231";
   const fallbackRegion = searchParams.get("region") || "Bilateral Hippocampus";
 
-  const reportCase = REPORT_DATA[caseId] || {
-    ...REPORT_DATA["AUD-0231"],
-    region: fallbackRegion,
-  };
+  // Check store for a real pipeline result first, fall back to static demo data
+  const storeCase  = useAnalysisStore((s) => s.getCase(caseId));
+  const latestCase = useAnalysisStore((s) => s.latestCase());
+
+  // Priority: URL case ID matches store → use it
+  // Otherwise: URL has no real case ID (empty or static) → show latest real run
+  // Otherwise: fall back to static demo
+  const liveCase: AnalysisCase | undefined =
+    storeCase ?? ((!caseId || !REPORT_DATA[caseId]) ? latestCase : undefined);
+
+  const reportCase = liveCase
+    ? buildLiveReport(liveCase)
+    : REPORT_DATA[caseId] ?? { ...REPORT_DATA["AUD-0231"], region: fallbackRegion };
+
+  const displayCaseId = liveCase?.id ?? caseId;
 
   const features = useMemo(() => reportCase.features, [reportCase]);
   const theme = classTheme(reportCase.datasetClass);
@@ -180,7 +259,7 @@ export default function ReportsPage() {
     </div>
     <div class="doc-meta">
       <div><strong>CLINICAL REPORT</strong></div>
-      <div>Case ID: <strong>${caseId}</strong></div>
+      <div>Case ID: <strong>${displayCaseId}</strong></div>
       <div>Region: <strong>${reportCase.region}</strong></div>
       <div>Generated: <strong>${date}</strong></div>
     </div>

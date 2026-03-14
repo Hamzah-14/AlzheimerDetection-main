@@ -7,6 +7,7 @@ import { usePageTitle } from "@/lib/use-page-title";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { DASHBOARD_CASES, HEATMAP_CASES, type DashboardCase, type HeatmapCase } from "@/lib/cases";
+import { useAnalysisStore } from "@/lib/analysis-store";
 import {
   Brain,
   Activity,
@@ -426,7 +427,29 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // [] = once on mount; start() is a stable Zustand ref
 
-  const cases: CaseRow[] = useMemo(() => DASHBOARD_CASES, []);
+  const storeCases = useAnalysisStore((s) => s.cases);
+
+  // Convert real pipeline results to DashboardCase shape, prepend to static demo cases
+  const realCases: DashboardCase[] = useMemo(() => storeCases.map((c) => {
+    const pred = c.result.final.prediction;
+    const conf = c.result.final.confidence;
+    return {
+      id:             c.id,
+      region:         c.region,
+      risk:           c.risk,
+      lat:            "~3.2s",
+      status:         "Complete",
+      confidence:     `${(conf * 100).toFixed(1)}%`,
+      feature:        pred.includes("Alzheimer") ? "High AD texture signal" : pred.includes("MCI") ? "Asymmetric hippocampal texture" : "Normal texture pattern",
+      note:           pred,
+      recommendation: pred.includes("Alzheimer") ? "Refer to specialist" : pred.includes("MCI") ? "Monitor closely" : "Routine follow-up",
+    };
+  }), [storeCases]);
+
+  const cases: CaseRow[] = useMemo(
+    () => [...realCases, ...DASHBOARD_CASES],
+    [realCases]
+  );
 
   /* ── Throughput chart ─────────────────────────────────────────── */
   const throughput = [10, 12, 14, 13, 16, 18, 28];

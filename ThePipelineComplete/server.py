@@ -27,11 +27,12 @@ import os
 import sys
 import tempfile
 import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import traceback
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any, AsyncGenerator, List, Optional
+from typing import Any, AsyncGenerator
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -121,11 +122,21 @@ def _run_pipeline(
         _emit(job_id, "stage", {"index": 1, "status": "active", "label": "Preprocess"})
 
         scan_dates = _parse_dates(scan_dates_str)
-        all_bin: list[bytes] = []
 
-        for path in scan_paths:
-            bin_bytes = preprocess_to_bin(path)
-            all_bin.append(bin_bytes)
+        # Preprocess all scans in parallel — each scan gets its own thread
+        # scan_paths are already sorted by date; we preserve order via index
+        all_bin: list[bytes] = [b""] * len(scan_paths)
+
+        def _preprocess_one(args):
+            idx, path = args
+            return idx, preprocess_to_bin(path)
+
+        with ThreadPoolExecutor(max_workers=len(scan_paths)) as executor:
+            futures = {executor.submit(_preprocess_one, (i, p)): i
+                       for i, p in enumerate(scan_paths)}
+            for future in as_completed(futures):
+                idx, bin_bytes = future.result()
+                all_bin[idx] = bin_bytes
 
         _emit(job_id, "stage", {"index": 1, "status": "complete", "label": "Preprocess"})
 
@@ -202,25 +213,35 @@ def _run_pipeline(
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
+@app.get("/health")
+async def health():
+    return {"status": "ok", "base_dir": str(BASE_DIR)}
+
+
 @app.post("/analyze")
 async def analyze(
-    scans: List[UploadFile] = File(...),
-    scan_dates: List[str] = Form(...),
-    age: int = Form(...),
-    sex: str = Form(...),
-    education: int = Form(...),
-    race: str = Form(...),
-    # APOE updated to str so we can search for "e4"
-    apoe: Optional[str] = Form(None),
-    abeta42: Optional[float] = Form(None),
-    tau: Optional[float] = Form(None),
-    ptau: Optional[float] = Form(None)
+    # Files
+    scans: list[UploadFile] = File(...),
+
+    # Scan metadata
+    scan_dates: str = Form(...),        # JSON array of "YYYY-MM-DD" strings
+
+    # Demographics (required)
+    age: float       = Form(...),
+    sex: str         = Form(...),       # "M" or "F"
+    education: float = Form(...),
+    race: str        = Form(...),
+
+    # Optional biomarkers (send empty string to skip)
+    apoe: str   = Form(""),            # e.g. "e3/e4" or ""
+    abeta42: str = Form(""),
+    tau: str    = Form(""),
+    ptau: str   = Form(""),
 ):
     if len(scans) < 2:
         raise HTTPException(400, "At least 2 scan files are required.")
 
-    # FastAPI already provides this as a list from the Multipart Form
-    dates_list = scan_dates 
+    dates_list: list[str] = json.loads(scan_dates)
     if len(dates_list) != len(scans):
         raise HTTPException(400, "Number of scan_dates must match number of scans.")
 
@@ -240,13 +261,17 @@ async def analyze(
             f.write(await upload.read())
         tmp_paths.append(tmp_path)
 
-    # Build patient_data dict safely
+    # Build patient_data dict (mirrors build_model_input output)
+    def _opt_float(s: str):
+        s = s.strip()
+        return float(s) if s else None
+
     apoe_e4_count = None
-    if apoe:
-        apoe_e4_count = float(apoe.lower().count("e4"))
+    if apoe.strip():
+        apoe_e4_count = float(apoe.count("e4"))
 
     n = len(scans)
-    dates_dt = [datetime.strptime(d.strip(), "%Y-%m-%d") for d in sorted_dates]
+    dates_dt = [datetime.strptime(d, "%Y-%m-%d") for d in sorted_dates]
     gaps = [(dates_dt[i] - dates_dt[0]).days / 30.44 for i in range(n)]
     followup = gaps[-1] if len(gaps) > 1 else 0.0
 
@@ -255,20 +280,19 @@ async def analyze(
         "sex_encoded":   1.0 if sex.upper() == "M" else 0.0,
         "education":     education,
         "apoe_e4_count": apoe_e4_count,
-        "race_White":    1.0 if race.lower() == "white" else 0.0,
-        "race_Black":    1.0 if race.lower() == "black" else 0.0,
-        "race_Asian":    1.0 if race.lower() == "asian" else 0.0,
-        "race_Hispanic": 1.0 if race.lower() == "hispanic" else 0.0,
-        "race_Other":    1.0 if race.lower() == "other" else 0.0,
-        # FastAPI handles the float conversion natively now
-        "csf_ABETA42":   abeta42, 
-        "csf_TAU":       tau,
-        "csf_PTAU":      ptau,
+        "race_White":    1.0 if race == "White"    else 0.0,
+        "race_Black":    1.0 if race == "Black"    else 0.0,
+        "race_Asian":    1.0 if race == "Asian"    else 0.0,
+        "race_Hispanic": 1.0 if race == "Hispanic" else 0.0,
+        "race_Other":    1.0 if race == "Other"    else 0.0,
+        "csf_ABETA42":   _opt_float(abeta42),
+        "csf_TAU":       _opt_float(tau),
+        "csf_PTAU":      _opt_float(ptau),
         "n_scans":       float(n),
         "followup_months": followup,
     }
 
-    # Create real job tracking UUID
+    # Create job
     job_id = str(uuid.uuid4())
     loop = asyncio.get_event_loop()
     _job_queues[job_id] = asyncio.Queue()
@@ -287,7 +311,7 @@ async def analyze(
         f'event: stage\ndata: {json.dumps({"index": 1, "status": "active",   "label": "Preprocess"})}\n\n'
     )
 
-    # Kick off pipeline in background thread
+    # Kick off pipeline in background thread (CPU-bound, can't use async)
     thread = threading.Thread(
         target=_run_pipeline,
         args=(job_id, tmp_paths, sorted_dates, patient_data),
@@ -296,6 +320,7 @@ async def analyze(
     thread.start()
 
     return {"job_id": job_id}
+
 
 @app.get("/analyze/{job_id}/stream")
 async def stream(job_id: str):
