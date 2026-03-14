@@ -640,6 +640,12 @@ export default function DashboardPage() {
           </CardHeader>
 
           <CardContent className="flex flex-col">
+            {storeCases.length === 0 && (
+              <div className="mb-3 flex items-center justify-between rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-2.5 text-xs text-white/45">
+                No real cases yet — demo data shown below
+                <a href="/upload" className="text-purple-400 hover:text-purple-300 transition">Upload a case →</a>
+              </div>
+            )}
             <div
               className="overflow-hidden rounded-2xl border border-white/10"
               onMouseLeave={scheduleHide}

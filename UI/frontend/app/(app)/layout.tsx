@@ -30,10 +30,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             <AnimatePresence mode="wait" initial={false}>
               <motion.main
                 key={pathname}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.18 }}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
                 className="flex-1 p-6 pt-6 pb-0"
               >
                 {children}

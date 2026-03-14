@@ -15,7 +15,6 @@ This version reproduces the FPGA flow as closely as possible:
     - output 252 features total:
         [84 L features | 84 R features | 84 asymmetry features]
 """
-
 import numpy as np
 
 # =============================================================================
@@ -104,7 +103,6 @@ def _load_lr_from_bin(data):
 
     return x[0], x[1]
 
-
 # =============================================================================
 # CPU GLCM (MIRRORS FPGA LOGIC)
 # =============================================================================
@@ -129,7 +127,6 @@ def _compute_valid_overlap_ranges(size: int, delta: int):
         d0 = 0
         d1 = size + delta
     return s0, s1, d0, d1
-
 
 def _glcm_hist_block_directed(block: np.ndarray, dz: int, dy: int, dx: int) -> np.ndarray:
     """
@@ -158,7 +155,6 @@ def _glcm_hist_block_directed(block: np.ndarray, dz: int, dy: int, dx: int) -> n
     hist_1d = np.bincount(bins, minlength=BINS)
 
     return hist_1d.reshape(LEVELS, LEVELS).astype(np.uint32, copy=False)
-
 
 def _run_glcm_on_volume_cpu(vol_3d: np.ndarray) -> np.ndarray:
     """

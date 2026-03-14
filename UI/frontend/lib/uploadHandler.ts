@@ -53,7 +53,7 @@ export async function runAnalysis(
   );
 
   sorted.forEach((s) => form.append("scans", s.file, s.file.name));
-  sorted.forEach((s) => form.append("scan_dates", s.date));
+  form.append("scan_dates", JSON.stringify(sorted.map((s) => s.date)));
 
   form.append("age",       String(patient.age));
   form.append("sex",       patient.sex);

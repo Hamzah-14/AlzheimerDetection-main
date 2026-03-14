@@ -25,6 +25,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { usePageTitle } from "@/lib/use-page-title";
+import { EmptyState } from "@/components/ui/empty-state";
 
 function classTheme(datasetClass: DatasetClass) {
   if (datasetClass === "AD") {
@@ -138,6 +139,7 @@ export default function TimelinePage() {
     : TIMELINE_DATA[caseId] ?? { ...TIMELINE_DATA["AUD-0231"], region: fallbackRegion };
 
   const displayCaseId = liveCase?.id ?? caseId;
+  const showEmpty = !liveCase && !TIMELINE_DATA[caseId];
 
   const theme = classTheme(caseInfo.datasetClass);
 
@@ -193,6 +195,23 @@ export default function TimelinePage() {
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  if (showEmpty) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-white">Case Timeline</h1>
+          <p className="mt-1 text-sm text-white/60">Workflow history showing how a case moved through preprocessing, radiomics, classification, and reporting.</p>
+        </div>
+        <EmptyState
+          icon={Activity}
+          title="No timeline available"
+          description="Run a scan to see the full processing timeline for a case."
+          action={{ label: "Upload a Case", onClick: () => router.push("/upload") }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

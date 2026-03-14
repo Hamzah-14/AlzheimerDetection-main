@@ -15,6 +15,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { usePageTitle } from "@/lib/use-page-title";
+import { EmptyState } from "@/components/ui/empty-state";
 
 type OverlayMode = "Saliency" | "Contrast" | "Homogeneity" | "Energy";
 type FeatureName =
@@ -169,6 +170,7 @@ export default function ExplainPage() {
     : EXPLAIN_DATA[caseId] ?? { ...EXPLAIN_DATA["AUD-0231"], region: fallbackRegion };
 
   const displayCaseId = liveCase?.id ?? caseId;
+  const showEmpty = !liveCase && !EXPLAIN_DATA[caseId];
 
   const features = useMemo(() => explainCase.features, [explainCase]);
   const [overlayMode, setOverlayMode] = useState<OverlayMode>("Saliency");
@@ -225,6 +227,23 @@ export default function ExplainPage() {
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  if (showEmpty) {
+    return (
+      <div className="space-y-5">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-white">Explainable AI</h1>
+          <p className="mt-1 text-sm text-white/60">Case-specific feature attribution, saliency reasoning, and clinician-friendly interpretation.</p>
+        </div>
+        <EmptyState
+          icon={Brain}
+          title="No analysis available"
+          description="Upload and run a scan to see live explainability results."
+          action={{ label: "Upload a Case", onClick: () => router.push("/upload") }}
+        />
+      </div>
+    );
+  }
 
   const confidenceBarClass =
     explainCase.confidence >= 0.75

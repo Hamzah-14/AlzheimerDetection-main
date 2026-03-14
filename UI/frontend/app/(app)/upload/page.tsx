@@ -218,6 +218,8 @@ export default function UploadPage() {
   const [tau,          setTau]         = useState("");
   const [ptau,         setPtau]        = useState("");
   const [noBiomarkers, setNoBiomarkers]= useState(false);
+  const [stageProgress, setStageProgress] = useState<Record<number, number>>({});
+  const stageIntervalsRef = useRef<Record<number, ReturnType<typeof setInterval>>>({});
   const [jobs,          setJobs]          = useState<Job[]>([]);
   const [pipelineState, setPipelineState] = useState<PipelineState>("idle");
   const jobCounter = useRef(1);
@@ -256,6 +258,21 @@ export default function UploadPage() {
         ptau:(!noBiomarkers&&ptau)?Number(ptau):undefined },
       {
         onStage:(index,status) => {
+          if (status === "active") {
+            setStageProgress(p => ({ ...p, [index]: 0 }));
+            const iv = setInterval(() => {
+              setStageProgress(p => {
+                const cur = p[index] ?? 0;
+                if (cur >= 90) return p;
+                return { ...p, [index]: cur + 1.5 };
+              });
+            }, 100);
+            stageIntervalsRef.current[index] = iv;
+          } else {
+            clearInterval(stageIntervalsRef.current[index]);
+            delete stageIntervalsRef.current[index];
+            setStageProgress(p => ({ ...p, [index]: 100 }));
+          }
           updateJob(jobId,{
             activeStage: status==="active"?index:index+1<STAGES.length?index+1:-1,
             completedStages: status==="complete"
@@ -511,7 +528,10 @@ export default function UploadPage() {
                           </div>
                           {status==="active"&&(
                             <div className="mt-2 h-0.5 overflow-hidden rounded-full bg-white/5">
-                              <div className={cn("h-full rounded-full bg-gradient-to-r animate-[fill-bar_3s_linear_forwards]",stage.fpga?"from-purple-400 to-violet-400":"from-cyan-400 to-sky-400")}/>
+                              <div
+                                className={cn("h-full rounded-full bg-gradient-to-r transition-[width] duration-300 ease-out",stage.fpga?"from-purple-400 to-violet-400":"from-cyan-400 to-sky-400")}
+                                style={{ width: `${stageProgress[i] ?? 0}%` }}
+                              />
                             </div>
                           )}
                         </div>
