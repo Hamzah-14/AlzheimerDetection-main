@@ -63,9 +63,38 @@ _inf_mod.TASKS["task3"]["model_dir"] = str(BASE_DIR / "trained_models" / "task3"
 # above patch already fixes it — no extra action needed.
 
 from glcm import extract_features
-from preprocessing import preprocess_to_bin
+from preprocessing import (
+    n4_correct, register_to_mni, crop_hippocampus,
+    quantize_crops, crops_to_bin_bytes,
+)
 from data_fusion import compute_temporal_features, build_metadata_array
 from inference import run_cascade
+import numpy as np
+
+# ── NCC quality thresholds (match training pipeline 0_0_3_MNI.py) ────────────
+NCC_FAIL_THRESHOLD = 0.60   # below → reject scan, abort pipeline
+NCC_WARN_THRESHOLD = 0.70   # below → continue but flag warning in result
+NCC_MIN_VOXELS     = 50_000 # below → NCC unreliable (corrupted/clipped FOV)
+
+def _compute_ncc(template_np: np.ndarray, registered_np: np.ndarray) -> tuple:
+    """
+    Normalised cross-correlation restricted to voxels nonzero in both
+    the MNI template and the registered scan. Matches compute_ncc() in
+    0_0_3_MNI.py exactly — same mask, same formula.
+    Returns (ncc, n_overlap_voxels).
+    """
+    mask     = (template_np > 0) & (registered_np > 0)
+    n_voxels = int(mask.sum())
+    if n_voxels < NCC_MIN_VOXELS:
+        return 0.0, n_voxels
+    f = template_np[mask].astype(np.float64)
+    m = registered_np[mask].astype(np.float64)
+    f -= f.mean()
+    m -= m.mean()
+    denom = np.sqrt((f * f).sum()) * np.sqrt((m * m).sum())
+    if denom < 1e-8:
+        return 0.0, n_voxels
+    return float((f * m).sum() / denom), n_voxels
 
 # ── Job store (in-memory, single process) ─────────────────────────────────────
 # Each job_id → dict with keys: status, stages, result, error
@@ -123,20 +152,54 @@ def _run_pipeline(
 
         scan_dates = _parse_dates(scan_dates_str)
 
-        # Preprocess all scans in parallel — each scan gets its own thread
-        # scan_paths are already sorted by date; we preserve order via index
-        all_bin: list[bytes] = [b""] * len(scan_paths)
+        # Preprocess all scans in parallel — each scan gets its own thread.
+        # NCC is computed after registration (before cropping) as a quality gate.
+        # scan_paths are already sorted by date; we preserve order via index.
+        all_bin:      list[bytes] = [b""]  * len(scan_paths)
+        all_ncc:      list[float] = [0.0]  * len(scan_paths)
+        ncc_warnings: list[str]   = []
+
+        # Load MNI template numpy array once for NCC computation
+        import ants as _ants
+        _template_np = _ants.image_read(str(BASE_DIR / "MNI_Template" / "MNI152_T1_1mm.nii.gz")).numpy()
 
         def _preprocess_one(args):
             idx, path = args
-            return idx, preprocess_to_bin(path)
+            # Step-by-step preprocessing so we can intercept after registration
+            img_n4         = n4_correct(path)
+            img_registered = register_to_mni(img_n4)
+
+            # ── NCC quality check ───────────────────────────────────────────
+            registered_np       = img_registered.numpy()
+            ncc, n_overlap      = _compute_ncc(_template_np, registered_np)
+
+            if ncc < NCC_FAIL_THRESHOLD:
+                raise ValueError(
+                    f"Scan {idx+1} registration failed: NCC={ncc:.3f} "
+                    f"(threshold={NCC_FAIL_THRESHOLD}). "
+                    f"Overlap voxels: {n_overlap:,}. "
+                    f"Check scan orientation or image quality."
+                )
+
+            # Crop, quantize, serialise
+            crops           = crop_hippocampus(img_registered)
+            crops_quantized = quantize_crops(crops)
+            bin_bytes       = crops_to_bin_bytes(crops_quantized)
+
+            return idx, bin_bytes, ncc, n_overlap
 
         with ThreadPoolExecutor(max_workers=len(scan_paths)) as executor:
             futures = {executor.submit(_preprocess_one, (i, p)): i
                        for i, p in enumerate(scan_paths)}
             for future in as_completed(futures):
-                idx, bin_bytes = future.result()
+                idx, bin_bytes, ncc, n_overlap = future.result()
                 all_bin[idx] = bin_bytes
+                all_ncc[idx] = ncc
+                if ncc < NCC_WARN_THRESHOLD:
+                    ncc_warnings.append(
+                        f"Scan {idx+1}: NCC={ncc:.3f} — registration quality low, "
+                        f"results may be less reliable."
+                    )
 
         _emit(job_id, "stage", {"index": 1, "status": "complete", "label": "Preprocess"})
 
@@ -186,6 +249,13 @@ def _run_pipeline(
                 import math
                 return None if math.isnan(obj) else round(obj, 4)
             return obj
+
+        # Attach NCC quality metadata to result
+        results["registration_qc"] = {
+            "ncc_per_scan":   [round(n, 4) for n in all_ncc],
+            "ncc_warnings":   ncc_warnings,
+            "ncc_pass":       all(n >= NCC_WARN_THRESHOLD for n in all_ncc),
+        }
 
         _emit(job_id, "result", {"status": "success", "data": _clean(results)})
         _jobs[job_id]["status"] = "done"

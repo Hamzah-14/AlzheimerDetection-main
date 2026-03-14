@@ -25,7 +25,7 @@ TASKS = {
 }
 
 AD_THRESHOLD  = 0.65
-MCI_THRESHOLD = 0.55
+MCI_THRESHOLD = 0.51
 
 # =============================================================================
 # MODEL LOADER

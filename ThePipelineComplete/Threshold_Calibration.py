@@ -51,9 +51,8 @@ warnings.filterwarnings("ignore")
 BASE_DIR   = Path(__file__).resolve().parent
 MODEL_DIR  = BASE_DIR / "trained_models" / "task3"
 DATA_PATHS = [
-    BASE_DIR.parent / "scan_level_enriched.csv",
-    BASE_DIR.parent / "Hippocampus_Crops" / "scan_level_final.csv",
     BASE_DIR.parent / "scan_level_final.csv",
+    BASE_DIR.parent / "Hippocampus_Crops" / "scan_level_final.csv",
     Path("scan_level_final.csv"),
 ]
 
@@ -72,10 +71,15 @@ def reconstruct_features(df):
     Align column names and reconstruct missing features to match
     the survived feature list the model was trained on.
     """
-    # 1. Rename A_ → asym_diff_
+    # 1. Rename A_ → asym_diff_ (skip if target already exists to avoid duplicate columns)
     rename_map = {c: c.replace("A_", "asym_diff_", 1)
-                  for c in df.columns if c.startswith("A_")}
+                  for c in df.columns if c.startswith("A_")
+                  and c.replace("A_", "asym_diff_", 1) not in df.columns}
     df = df.rename(columns=rename_map)
+    # Drop any residual A_* columns whose asym_diff_* counterpart already existed
+    leftover_a = [c for c in df.columns if c.startswith("A_")]
+    if leftover_a:
+        df = df.drop(columns=leftover_a)
 
     # 2. Rename CSF columns
     csf_map = {
@@ -149,7 +153,12 @@ def align_features(df, feature_list):
 
     X = pd.DataFrame(index=df.index)
     for f in feature_list:
-        X[f] = df[f] if f in df.columns else np.nan
+        if f not in df.columns:
+            X[f] = np.nan
+        else:
+            col = df[f]
+            # Guard against duplicate columns returning a DataFrame
+            X[f] = col.iloc[:, 0] if isinstance(col, pd.DataFrame) else col
     return X
 
 
