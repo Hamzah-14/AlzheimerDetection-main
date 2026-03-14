@@ -1,8 +1,9 @@
 // lib/analysis-store.ts
 // Global store for completed pipeline results.
 // Any page can read from this — dashboard, reports, timeline.
-
+import { useAnalysisStore, type AnalysisCase } from "@/lib/analysis-store";
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -76,15 +77,24 @@ export function deriveRisk(result: CascadeResult): "High" | "Medium" | "Low" {
 
 // ── Store ─────────────────────────────────────────────────────────────────────
 
-export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
-  cases: [],
+export const useAnalysisStore = create<AnalysisStore>()(
+  persist(
+    (set, get) => ({
+      cases: [],
 
-  addCase: (c) =>
-    set((state) => ({ cases: [c, ...state.cases] })),   // newest first
+      addCase: (c) =>
+        set((state) => ({ cases: [c, ...state.cases] })),   // newest first
 
-  clearCases: () => set({ cases: [] }),
+      clearCases: () => set({ cases: [] }),
 
-  getCase: (id) => get().cases.find((c) => c.id === id),
+      getCase: (id) => get().cases.find((c) => c.id === id),
 
-  latestCase: () => get().cases[0],
-}));
+      latestCase: () => get().cases[0],
+    }),
+    {
+      name: "neurosight-analysis-store",   // localStorage key
+      // Only persist the cases array, not functions
+      partialize: (state) => ({ cases: state.cases }),
+    }
+  )
+);

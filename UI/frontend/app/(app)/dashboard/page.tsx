@@ -451,6 +451,10 @@ export default function DashboardPage() {
     [realCases]
   );
 
+  const totalProcessed = realCases.length + 28; // 28 = demo baseline
+  const highRisk       = realCases.filter(c => c.risk === "High").length + 6;
+  const inQueue        = Math.max(0, 3 - realCases.length);
+
   /* ── Throughput chart ─────────────────────────────────────────── */
   const throughput = [10, 12, 14, 13, 16, 18, 28];
   const maxThroughput = Math.max(...throughput);
@@ -584,11 +588,11 @@ export default function DashboardPage() {
       <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="Cases processed (7d)"
-          numericValue={28}
+          numericValue={totalProcessed}
           sub="vs last week"
           trend={12}
           icon={Activity}
-          spark={[10, 12, 14, 13, 16, 18, 28]}
+          spark={[10, 12, 14, 13, 16, 18, totalProcessed]}
           tint="purple"
           loading={!cardsLoaded}
         />
@@ -606,7 +610,7 @@ export default function DashboardPage() {
         />
         <StatCard
           title="High-risk flagged"
-          numericValue={6}
+          numericValue={highRisk}
           sub="Needs clinician review"
           trend={50}
           icon={Brain}
@@ -616,7 +620,7 @@ export default function DashboardPage() {
         />
         <StatCard
           title="Scans in queue"
-          numericValue={3}
+          numericValue={inQueue}
           sub="Upload → preprocess → infer"
           trend={-25}
           icon={Scan}

@@ -1,5 +1,5 @@
 "use client";
-
+import { useAnalysisStore, type AnalysisCase } from "@/lib/analysis-store";
 import { useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -85,19 +85,59 @@ function eventIcon(icon: TimelineEvent["icon"]) {
       return Activity;
   }
 }
+function buildLiveTimeline(c: AnalysisCase) {
+  const final = c.result.final;
+  const pred  = final.prediction;
+  const conf  = final.confidence;
+
+  const datasetClass: DatasetClass =
+    pred.includes("Alzheimer") ? "AD" :
+    pred.includes("MCI")       ? "MCI" : "NC";
+
+  const decision =
+    datasetClass === "AD"  ? "Alzheimer's Disease likely" :
+    datasetClass === "MCI" ? (c.result.task2?.label === "converting_MCI" ? "Converting MCI" : "Stable MCI") :
+    "Cognitively Normal";
+
+  const scanDates = c.scans.map(s => s.date).join(" → ");
+
+  const events = [
+    { title: "Scans Uploaded",       time: c.scans[0]?.date ?? "—", icon: "upload"     as const, status: "Complete" as const, description: `${c.scans.length} NIfTI scan${c.scans.length > 1 ? "s" : ""} received. Dates: ${scanDates}.` },
+    { title: "Preprocessing",        time: "N4 + MNI",               icon: "preprocess" as const, status: "Complete" as const, description: "N4 bias field correction applied. Registered to MNI152 1mm standard space. Bilateral hippocampal crops extracted (64³ voxels each side)." },
+    { title: "GLCM Radiomics",       time: "CPU (FPGA pending)",      icon: "radiomics"  as const, status: "Complete" as const, description: "3D GLCM features extracted across 13 directions, distances 1–4, Ng=32. 252 features total including L/R asymmetry." },
+    { title: "Cascade Classification", time: `Stopped at ${final.cascade_stopped_at}`, icon: "classify" as const, status: "Complete" as const, description: `AD probability: ${((c.result.task1?.probabilities?.AD ?? 0) * 100).toFixed(1)}%. MCI probability: ${((c.result.task3?.probabilities?.MCI ?? 0) * 100).toFixed(1)}%. Final: ${pred}.` },
+    { title: "Report Generated",     time: new Date(c.timestamp).toLocaleDateString(), icon: "report" as const, status: "Complete" as const, description: `Classification complete. Confidence: ${(conf * 100).toFixed(1)}%. Case ID: ${c.id}.` },
+  ];
+
+  return {
+    datasetClass,
+    decision,
+    confidence: conf,
+    region: c.region,
+    latency: "~3.2s",
+    status: "Complete",
+    summary: `Longitudinal analysis of ${c.scans.length} MRI scan${c.scans.length > 1 ? "s" : ""}. Patient: ${c.patient.age}yo ${c.patient.sex === "M" ? "male" : "female"}, ${c.patient.education}yr education, ${c.patient.race}${c.patient.apoe ? `, APOE ${c.patient.apoe}` : ""}. Result: ${pred} (${(conf * 100).toFixed(1)}% confidence).`,
+    events,
+  };
+}
 
 export default function TimelinePage() {
   usePageTitle("Timeline");
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams();  
   const router = useRouter();
-
-  const caseId = searchParams.get("case") || "AUD-0231";
+  const caseId        = searchParams.get("case") || "AUD-0231";
   const fallbackRegion = searchParams.get("region") || "Bilateral Hippocampus";
+  const storeCase  = useAnalysisStore((s) => s.getCase(caseId));
+  const latestCase = useAnalysisStore((s) => s.latestCase());
 
-  const caseInfo = TIMELINE_DATA[caseId] || {
-    ...TIMELINE_DATA["AUD-0231"],
-    region: fallbackRegion,
-  };
+  const liveCase: AnalysisCase | undefined =
+    storeCase ?? ((!caseId || !TIMELINE_DATA[caseId]) ? latestCase : undefined);
+
+  const caseInfo = liveCase
+    ? buildLiveTimeline(liveCase)
+    : TIMELINE_DATA[caseId] ?? { ...TIMELINE_DATA["AUD-0231"], region: fallbackRegion };
+
+  const displayCaseId = liveCase?.id ?? caseId;
 
   const theme = classTheme(caseInfo.datasetClass);
 
@@ -149,7 +189,7 @@ export default function TimelinePage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `timeline-${caseId}.txt`;
+    a.download = `timeline-${displayCaseId}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -181,7 +221,7 @@ export default function TimelinePage() {
 
         <div className="flex flex-wrap gap-2">
           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs text-white/70">
-            Case: <span className="text-white/90">{caseId}</span> • Status:{" "}
+            Case: <span className="text-white/90">{displayCaseId}</span> • Status:{" "}
             <span className="text-white/90">{caseInfo.status}</span>
           </div>
           <button
