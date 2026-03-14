@@ -116,10 +116,14 @@ app.add_middleware(
 
 def _emit(job_id: str, event: str, data: dict):
     """Thread-safe SSE event push into a job's queue."""
-    loop = _jobs[job_id]["loop"]
-    queue = _job_queues[job_id]
-    payload = json.dumps(data)
-    asyncio.run_coroutine_threadsafe(queue.put(f"event: {event}\ndata: {payload}\n\n"), loop)
+    try:
+        loop = _jobs[job_id]["loop"]
+        queue = _job_queues[job_id]
+        payload = json.dumps(data)
+        asyncio.run_coroutine_threadsafe(queue.put(f"event: {event}\ndata: {payload}\n\n"), loop)
+    except Exception:
+        # Covers: event loop closed on shutdown, job cleaned up, JSON serialisation errors, etc.
+        pass
 
 
 def _parse_dates(date_strings: list[str]) -> list[float]:
@@ -213,6 +217,21 @@ def _run_pipeline(
             all_features.append(feats)
             feature_names = names
 
+        # Build a compact GLCM summary for the UI (latest scan, mean across blocks/directions)
+        # feature_names follow pattern: {L|R|A}_{block}_{dist}_{feat}_{stat}
+        # We average over all blocks/distances per (side, base_feature) pair.
+        BASE_FEATS = ["energy", "entropy", "contrast", "homogeneity",
+                      "correlation", "dissimilarity", "max_prob"]
+        glcm_summary: dict[str, float] = {}
+        if feature_names:
+            feat_arr = np.array(all_features[-1], dtype=float)
+            for side in ("L", "R", "A"):
+                for bf in BASE_FEATS:
+                    idxs = [i for i, n in enumerate(feature_names)
+                            if n.startswith(f"{side}_") and bf in n]
+                    if idxs:
+                        glcm_summary[f"{side}_{bf}"] = float(np.mean(feat_arr[idxs]))
+
         _emit(job_id, "stage", {"index": 2, "status": "complete", "label": "Radiomics"})
 
         # Stage 3 — Classify
@@ -241,13 +260,20 @@ def _run_pipeline(
         # Stage 4 — Report ready
         _emit(job_id, "stage", {"index": 4, "status": "complete", "label": "Report Ready"})
 
-        # Serialise final result (convert numpy floats → python floats)
+        # Serialise final result (convert numpy types → plain Python scalars)
+        import math
         def _clean(obj):
             if isinstance(obj, dict):
                 return {k: _clean(v) for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [_clean(v) for v in obj]
+            # numpy scalars (float32, float64, int32, int64, bool_, …)
+            if hasattr(obj, "item"):
+                obj = obj.item()
             if isinstance(obj, float):
-                import math
                 return None if math.isnan(obj) else round(obj, 4)
+            if isinstance(obj, np.ndarray):
+                return [_clean(v) for v in obj.tolist()]
             return obj
 
         # Attach NCC quality metadata to result
@@ -257,22 +283,28 @@ def _run_pipeline(
             "ncc_pass":       all(n >= NCC_WARN_THRESHOLD for n in all_ncc),
         }
 
+        results["glcm_summary"] = glcm_summary
         _emit(job_id, "result", {"status": "success", "data": _clean(results)})
         _jobs[job_id]["status"] = "done"
         _jobs[job_id]["result"] = results
 
     except Exception as exc:
         tb = traceback.format_exc()
+        print(f"\n[Pipeline ERROR — {job_id[:8]}]\n{tb}", flush=True)
         _emit(job_id, "error", {"message": str(exc), "traceback": tb})
         _jobs[job_id]["status"] = "error"
         _jobs[job_id]["error"] = str(exc)
 
     finally:
-        # Signal stream to close
-        loop = _jobs[job_id]["loop"]
-        asyncio.run_coroutine_threadsafe(
-            _job_queues[job_id].put("__DONE__"), loop
-        )
+        # Signal stream to close — must be guarded: if uvicorn reloads mid-run
+        # the event loop is closed and run_coroutine_threadsafe raises RuntimeError.
+        try:
+            loop = _jobs[job_id]["loop"]
+            asyncio.run_coroutine_threadsafe(
+                _job_queues[job_id].put("__DONE__"), loop
+            )
+        except Exception as fin_exc:
+            print(f"[Pipeline FINALLY] Could not send __DONE__: {fin_exc}", flush=True)
         # Clean up temp files
         for path in scan_paths:
             try:
@@ -400,12 +432,15 @@ async def stream(job_id: str):
     async def event_generator() -> AsyncGenerator[str, None]:
         queue = _job_queues[job_id]
         while True:
-            msg = await queue.get()
+            try:
+                msg = await asyncio.wait_for(queue.get(), timeout=20.0)
+            except asyncio.TimeoutError:
+                # Send SSE comment to keep the connection alive during long stages
+                yield ": keepalive\n\n"
+                continue
             if msg == "__DONE__":
                 break
             yield msg
-            # Small sleep to avoid tight loop
-            await asyncio.sleep(0.01)
 
     return StreamingResponse(
         event_generator(),
