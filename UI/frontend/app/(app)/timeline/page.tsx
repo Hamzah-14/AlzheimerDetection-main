@@ -1,5 +1,9 @@
 "use client";
-import { useAnalysisStore, type AnalysisCase } from "@/lib/analysis-store";
+import {
+  LineChart, Line, XAxis, YAxis, ResponsiveContainer,
+  Tooltip as RechartTooltip, ReferenceLine,
+} from "recharts";
+import { useAnalysisStore, type AnalysisCase, type TemporalProgression, type TemporalMetricSide } from "@/lib/analysis-store";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -23,9 +27,185 @@ import {
   CheckCircle2,
   CircleDashed,
   AlertTriangle,
+  TrendingUp,
 } from "lucide-react";
 import { usePageTitle } from "@/lib/use-page-title";
 import { EmptyState } from "@/components/ui/empty-state";
+
+// ── Temporal Progression Panel ─────────────────────────────────────────────
+
+const METRIC_SENTIMENT: Record<string, "good_up" | "bad_up" | "neutral"> = {
+  Contrast:     "bad_up",
+  Dissimilarity:"bad_up",
+  Homogeneity:  "good_up",
+  Energy:       "good_up",
+  Entropy:      "neutral",
+};
+
+function ChangeCell({ side, label }: { side: TemporalMetricSide; label: string }) {
+  if (side.direction === "stable") return <span className="text-white/30">—</span>;
+  const s = METRIC_SENTIMENT[label] ?? "neutral";
+  const color =
+    s === "neutral"  ? "text-amber-400" :
+    s === "good_up"  ? (side.direction === "up" ? "text-emerald-400" : "text-red-400") :
+    /* bad_up */       (side.direction === "up" ? "text-red-400"     : "text-emerald-400");
+  const arrow = side.direction === "up" ? "↑" : "↓";
+  const sign  = side.delta_pct > 0 ? "+" : "";
+  return <span className={color}>{arrow} {sign}{side.delta_pct.toFixed(1)}%</span>;
+}
+
+function TemporalProgressionPanel({ tp }: { tp: TemporalProgression }) {
+  const topMetric = tp.metrics.length > 0
+    ? [...tp.metrics].sort((a, b) => Math.abs(b.L.delta_pct) - Math.abs(a.L.delta_pct))[0]
+    : null;
+
+  let summaryText = `Over ${tp.followup_months.toFixed(1)} months across ${tp.n_scans} scan${tp.n_scans !== 1 ? "s" : ""}`;
+  if (topMetric && topMetric.L.direction !== "stable") {
+    const dir = topMetric.L.direction === "up" ? "increased" : "decreased";
+    const isAdPattern =
+      ((topMetric.name === "contrast" || topMetric.name === "dissimilarity") && topMetric.L.direction === "up") ||
+      ((topMetric.name === "homogeneity" || topMetric.name === "energy") && topMetric.L.direction === "down");
+    const consistency = isAdPattern
+      ? "consistent with progressive texture degradation"
+      : "not consistent with progressive texture degradation";
+    summaryText += `, left hippocampal ${topMetric.label.toLowerCase()} ${dir} by ${Math.abs(topMetric.L.delta_pct).toFixed(1)}% — ${consistency}.`;
+  } else {
+    summaryText += ", hippocampal texture remained stable across all key metrics.";
+  }
+
+  return (
+    <div className="glass pulse-trigger rounded-[28px] p-6">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 text-sm text-white/70">
+          <TrendingUp className="h-4 w-4 text-white/50" />
+          Hippocampal Texture Progression
+        </div>
+        <div className="text-xs text-white/40">
+          {tp.followup_months.toFixed(1)} months follow-up · {tp.n_scans} scan{tp.n_scans !== 1 ? "s" : ""}
+        </div>
+      </div>
+
+      <div className="mt-5 overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-white/[0.06] text-white/40">
+              <th className="pb-3 text-left font-medium">Feature</th>
+              <th className="pb-3 pr-3 text-right font-medium">L Base</th>
+              <th className="pb-3 pr-3 text-right font-medium">L Latest</th>
+              <th className="pb-3 pr-5 text-right font-medium">L Change</th>
+              <th className="pb-3 pr-3 text-right font-medium">R Base</th>
+              <th className="pb-3 pr-3 text-right font-medium">R Latest</th>
+              <th className="pb-3 pr-5 text-right font-medium">R Change</th>
+              <th className="pb-3 text-right font-medium">Asym Δ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tp.metrics.map((m) => {
+              const asymAbs = Math.abs(m.asym_delta);
+              const asymColor =
+                asymAbs < 0.02 ? "text-cyan-400" :
+                asymAbs < 0.05 ? "text-amber-400" : "text-red-400";
+              return (
+                <tr key={m.name} className="border-b border-white/[0.04] last:border-0">
+                  <td className="py-3 font-medium text-white/90">{m.label}</td>
+                  <td className="py-3 pr-3 text-right font-mono text-white/45">{m.L.baseline.toFixed(4)}</td>
+                  <td className="py-3 pr-3 text-right font-mono text-white/45">{m.L.latest.toFixed(4)}</td>
+                  <td className="py-3 pr-5 text-right font-semibold">
+                    <ChangeCell side={m.L} label={m.label} />
+                  </td>
+                  <td className="py-3 pr-3 text-right font-mono text-white/45">{m.R.baseline.toFixed(4)}</td>
+                  <td className="py-3 pr-3 text-right font-mono text-white/45">{m.R.latest.toFixed(4)}</td>
+                  <td className="py-3 pr-5 text-right font-semibold">
+                    <ChangeCell side={m.R} label={m.label} />
+                  </td>
+                  <td className={cn("py-3 text-right font-mono", asymColor)}>
+                    {m.asym_delta >= 0 ? "+" : ""}{m.asym_delta.toFixed(4)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Longitudinal Charts — one per metric */}
+      {tp.scan_dates.length >= 2 && (
+        <div className="mt-6 border-t border-white/[0.05] pt-5">
+          <div className="mb-4 flex items-center gap-2">
+            <span className="text-xs font-medium text-white/40">Longitudinal Charts</span>
+            <span className="text-[10px] text-white/20">
+              <span className="inline-block h-2 w-4 rounded-full bg-cyan-400/60 align-middle" /> L hippocampus
+              <span className="ml-3 inline-block h-2 w-4 rounded-full bg-purple-400/60 align-middle" /> R hippocampus
+            </span>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {tp.metrics.map((m) => {
+              const data = tp.scan_dates.map((month, i) => ({
+                month,
+                L: m.l_values?.[i] ?? 0,
+                R: m.r_values?.[i] ?? 0,
+              }));
+              return (
+                <div key={m.name} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+                  <div className="mb-1 flex items-center justify-between">
+                    <span className="text-xs font-medium text-white/80">{m.label}</span>
+                    <div className="flex gap-3 text-[10px]">
+                      <ChangeCell side={m.L} label={m.label} />
+                      <span className="text-white/20">/</span>
+                      <ChangeCell side={m.R} label={m.label} />
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={90}>
+                    <LineChart data={data} margin={{ top: 6, right: 4, bottom: 0, left: 4 }}>
+                      <XAxis
+                        dataKey="month"
+                        tickFormatter={(v) => `${v}mo`}
+                        tick={{ fontSize: 9, fill: "rgba(255,255,255,0.25)" }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis hide domain={["auto", "auto"]} />
+                      <RechartTooltip
+                        contentStyle={{
+                          background: "#0f0f18",
+                          border: "1px solid rgba(255,255,255,0.1)",
+                          borderRadius: 10,
+                          fontSize: 11,
+                          color: "rgba(255,255,255,0.75)",
+                        }}
+                        formatter={(value: number, name: string) => [value.toFixed(4), name]}
+                        labelFormatter={(label) => `${label} months`}
+                      />
+                      <ReferenceLine y={data[0]?.L} stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
+                      <Line
+                        type="monotone" dataKey="L"
+                        stroke="#22d3ee" strokeWidth={1.5}
+                        dot={{ r: 3, fill: "#22d3ee", strokeWidth: 0 }}
+                        activeDot={{ r: 4 }}
+                      />
+                      <Line
+                        type="monotone" dataKey="R"
+                        stroke="#c084fc" strokeWidth={1.5}
+                        dot={{ r: 3, fill: "#c084fc", strokeWidth: 0 }}
+                        activeDot={{ r: 4 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <p className="mt-4 border-t border-white/[0.05] pt-4 text-xs leading-6 text-white/50">
+        {summaryText}
+      </p>
+    </div>
+  );
+}
+
+// ── Page helpers ───────────────────────────────────────────────────────────────
 
 function classTheme(datasetClass: DatasetClass) {
   if (datasetClass === "AD") {
@@ -481,6 +661,11 @@ export default function TimelinePage() {
           </div>
         </div>
       </div>
+
+      {/* Temporal Progression — live cases only */}
+      {liveCase && liveCase.result.temporal_progression && (
+        <TemporalProgressionPanel tp={liveCase.result.temporal_progression} />
+      )}
     </div>
   );
 }

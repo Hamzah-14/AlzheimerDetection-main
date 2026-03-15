@@ -358,6 +358,69 @@ def _run_pipeline(
                 return [_clean(v) for v in obj.tolist()]
             return obj
 
+        # Temporal progression summary (only when 2+ scans are available)
+        if len(all_features) >= 2 and feature_names:
+            _TP_METRICS = [
+                ("contrast",      "Contrast"),
+                ("homogeneity",   "Homogeneity"),
+                ("energy",        "Energy"),
+                ("entropy",       "Entropy"),
+                ("dissimilarity", "Dissimilarity"),
+            ]
+            tp_followup = float(scan_dates[-1])
+
+            def _d1_avg(side: str, feat_key: str, scan_feats) -> float:
+                """Average GLCM values for given side+feature at d=1 (falls back to all distances)."""
+                for d1_tag in ("_d1_", "_d1", "d1_"):
+                    idxs = [i for i, n in enumerate(feature_names)
+                            if n.startswith(f"{side}_") and feat_key in n and d1_tag in n]
+                    if idxs:
+                        return float(np.mean([scan_feats[i] for i in idxs]))
+                idxs = [i for i, n in enumerate(feature_names)
+                        if n.startswith(f"{side}_") and feat_key in n]
+                return float(np.mean([scan_feats[i] for i in idxs])) if idxs else 0.0
+
+            def _side_info(base: float, latest: float, months: float) -> dict:
+                delta     = latest - base
+                delta_pct = (delta / base * 100) if abs(base) > 1e-8 else 0.0
+                slope     = (delta / months) if months > 0.1 else 0.0
+                direction = "stable" if abs(delta_pct) < 2.0 else ("up" if delta > 0 else "down")
+                return {
+                    "baseline":  base,
+                    "latest":    latest,
+                    "delta":     delta,
+                    "delta_pct": delta_pct,
+                    "slope":     slope,
+                    "direction": direction,
+                }
+
+            tp_metrics_list = []
+            for feat_key, label in _TP_METRICS:
+                l_vals = [_d1_avg("L", feat_key, sf) for sf in all_features]
+                r_vals = [_d1_avg("R", feat_key, sf) for sf in all_features]
+                lb, ll = l_vals[0], l_vals[-1]
+                rb, rl = r_vals[0], r_vals[-1]
+                asym_b = (lb - rb) / (lb + rb + 1e-8)
+                asym_l = (ll - rl) / (ll + rl + 1e-8)
+                tp_metrics_list.append({
+                    "name":          feat_key,
+                    "label":         label,
+                    "L":             _side_info(lb, ll, tp_followup),
+                    "R":             _side_info(rb, rl, tp_followup),
+                    "asym_baseline": asym_b,
+                    "asym_latest":   asym_l,
+                    "asym_delta":    asym_l - asym_b,
+                    "l_values":      [float(v) for v in l_vals],
+                    "r_values":      [float(v) for v in r_vals],
+                })
+
+            results["temporal_progression"] = _clean({
+                "followup_months": tp_followup,
+                "n_scans":         len(all_features),
+                "scan_dates":      list(scan_dates),
+                "metrics":         tp_metrics_list,
+            })
+
         # Attach NCC quality metadata to result
         results["registration_qc"] = {
             "ncc_per_scan":   [round(n, 4) for n in all_ncc],
@@ -374,8 +437,20 @@ def _run_pipeline(
             tasks_run.append("task3")
         if cascade_stopped == "task2":
             tasks_run.append("task2")
+        # If the patient didn't provide CSF biomarkers, remove CSF-derived features
+        # from the importance list — they weren't used in inference and would mislead.
+        has_csf = any(patient_data.get(k) is not None
+                      for k in ("csf_ABETA42", "csf_TAU", "csf_PTAU"))
+
+        def _is_csf_feat(name: str) -> bool:
+            n = name.lower()
+            return any(n.startswith(p) for p in ("csf_", "ptau_abeta", "abeta"))
+
         results["feature_importances"] = {
-            task: _FEATURE_IMPORTANCES.get(task, {}).get("top_features", [])
+            task: [
+                f for f in _FEATURE_IMPORTANCES.get(task, {}).get("top_features", [])
+                if has_csf or not _is_csf_feat(f.get("feature", ""))
+            ]
             for task in tasks_run
         }
 

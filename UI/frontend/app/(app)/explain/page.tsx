@@ -197,7 +197,7 @@ function CascadeFlow({ result }: { result: CascadeResult }) {
             <>
               <div className="flex items-center gap-2 px-3">
                 <div className="h-px flex-1 bg-white/8" />
-                <span className="text-[10px] text-white/30">MCI ≥ 55% → progression check</span>
+                <span className="text-[10px] text-white/30">MCI ≥ 51% → progression check</span>
                 <div className="h-px flex-1 bg-white/8" />
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
@@ -347,6 +347,7 @@ function buildLiveExplain(c: AnalysisCase) {
   const pred     = final.prediction;
   const conf     = final.confidence;
   const task1    = c.result.task1;
+  const task2    = c.result.task2;
   const task3    = c.result.task3;
 
   const datasetClass: "AD" | "MCI" | "NC" =
@@ -416,8 +417,18 @@ function buildLiveExplain(c: AnalysisCase) {
     decision,
     confidence: conf,
     region: c.region,
-    summary: `Radiomic analysis of bilateral hippocampal volumes. AD probability: ${(adProb*100).toFixed(1)}%, MCI probability: ${(mciProb*100).toFixed(1)}%. Final classification: ${pred}.`,
-    saliency: `The model's attention is concentrated in the bilateral hippocampal regions. The dominant signal drivers are texture contrast and homogeneity asymmetry between left and right hemispheres.`,
+    summary: [
+      `Task 1 (AD Screening): ${(adProb*100).toFixed(1)}% AD probability — ${adProb > 0.65 ? "above threshold, cascade stopped" : "below threshold, cascade continued"}.`,
+      task3 ? `Task 3 (MCI vs NC): ${(mciProb*100).toFixed(1)}% MCI probability — ${mciProb > 0.55 ? "MCI pattern detected" : "normal pattern"}.` : null,
+      task2 ? `Task 2 (Conversion): ${((task2.probabilities?.converting_MCI ?? 0)*100).toFixed(1)}% conversion risk.` : null,
+    ].filter(Boolean).join(" ") + ` Classification: ${pred} (${(conf*100).toFixed(1)}% confidence).`,
+    // Use AI narrative when available; otherwise build a data-driven cascade summary
+    saliency: c.result.ai_narrative ?? [
+      `The cascade classifier ran ${final.cascade_stopped_at === "task1" ? "one stage" : final.cascade_stopped_at === "task3" ? "two stages" : "three stages"}.`,
+      `AD screening (Task 1) returned ${(adProb*100).toFixed(1)}% — ${adProb > 0.65 ? "above the 65% AD threshold, decision made at this stage." : "below the AD threshold, case advanced to MCI screening."}`,
+      task3 ? `MCI vs NC (Task 3) returned ${(mciProb*100).toFixed(1)}% MCI probability${task2 ? ", triggering the conversion risk stage." : "."}` : null,
+      task2 ? `Conversion risk (Task 2): ${((task2.probabilities?.converting_MCI ?? 0)*100).toFixed(1)}% probability of MCI progressing to Alzheimer's.` : null,
+    ].filter(Boolean).join(" "),
     action,
     rationale,
     features,
@@ -795,12 +806,12 @@ export default function ExplainPage() {
               For live cases without importances, hide this panel entirely.
               For static demo cases, show illustrative GLCM bars. */}
           {hasRealFeats ? (
-            <div className="glass rounded-[26px] p-3">
+            <div className="glass rounded-[26px] p-3 overflow-visible relative z-20 hover:z-50">
               <div className="flex items-center gap-2 text-sm text-white/70">
                 <Activity className="h-4 w-4 text-white/50" />
                 Top Model Features
               </div>
-              <div className="mt-3 space-y-2">
+              <div className="mt-3 space-y-2 overflow-visible">
                 {realFeats.map((f) => {
                   const tip = featDescription(f.feature);
                   return (
@@ -818,11 +829,11 @@ export default function ExplainPage() {
                           style={{ width: barsMounted ? `${f.importance * 100}%` : "0%" }}
                         />
                       </div>
-                      {/* Rich tooltip */}
-                      <div className="pointer-events-none absolute left-1/2 top-0 z-20 hidden w-64 -translate-x-1/2 -translate-y-[calc(100%+10px)] rounded-xl border border-white/10 bg-[#0f0f18]/95 px-3 py-2.5 shadow-[0_0_24px_rgba(0,0,0,0.5)] backdrop-blur-md group-hover:block">
-                        <p className="mb-1 text-[11px] font-semibold text-white">{tip.title}</p>
-                        <p className="text-[10px] leading-relaxed text-white/55">{tip.desc}</p>
-                        <div className="mt-1.5 font-mono text-[9px] text-white/25">{f.feature}</div>
+                      {/* Rich tooltip — shown above. Container must be overflow-visible + z-20. */}
+                      <div className="pointer-events-none absolute left-1/2 top-0 z-[200] hidden w-80 -translate-x-1/2 -translate-y-[calc(100%+8px)] rounded-2xl border border-white/10 bg-[#0f0f18] px-4 py-3 shadow-[0_8px_40px_rgba(0,0,0,0.8)] backdrop-blur-md group-hover:block">
+                        <p className="mb-1.5 text-xs font-semibold text-white">{tip.title}</p>
+                        <p className="text-[11px] leading-relaxed text-white/60">{tip.desc}</p>
+                        <div className="mt-2 font-mono text-[10px] text-white/25">{f.feature}</div>
                       </div>
                     </div>
                   );

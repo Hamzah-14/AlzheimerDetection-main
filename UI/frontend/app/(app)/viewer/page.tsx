@@ -78,11 +78,13 @@ function buildLiveViewer(c: AnalysisCase): CaseInfo {
     defaultPlane: "Axial",
     defaultSlice: 32,
     defaultOverlayOpacity: 0.7,
+    // Only show tasks that actually ran — each bar is one cascade stage's output,
+    // not a combined budget. "Normal Probability" is removed because it is simply
+    // 1 − adProb from the same Task 1 classifier and adds no new information.
     features: [
-      { name: "AD Probability",     value: adProb,   color: "bg-red-400" },
-      { name: "MCI Probability",    value: mciProb,  color: "bg-amber-400" },
-      { name: "Normal Probability", value: ncProb,   color: "bg-cyan-400" },
-      { name: "Conversion Risk",    value: convProb, color: "bg-purple-400" },
+      { name: "Task 1 — AD probability",    value: adProb,   color: "bg-red-400"    },
+      ...(task3 ? [{ name: "Task 3 — MCI probability",  value: mciProb,  color: "bg-amber-400"  }] : []),
+      ...(task2 ? [{ name: "Task 2 — Conversion risk",  value: convProb, color: "bg-purple-400" }] : []),
     ],
   };
 }

@@ -455,7 +455,7 @@ export default function ReportsPage() {
           <div className="glass pulse-trigger rounded-[28px] p-6">
             <div className="flex items-center gap-2 text-sm text-white/70">
               <Activity className="h-4 w-4 text-white/50" />
-              Radiomic Findings
+              Classification Probabilities
             </div>
 
             <div className="mt-5 space-y-4">
