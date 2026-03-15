@@ -473,6 +473,50 @@ export default function ExplainPage() {
     return "bg-cyan-400";
   };
 
+  const featDescription = (feature: string): { title: string; desc: string } => {
+    const f = feature.toLowerCase();
+    // CSF biomarkers
+    if (f.includes("ptau_abeta") || f.includes("ptau/abeta"))
+      return { title: "CSF pTau / Aβ42 ratio", desc: "The strongest single Alzheimer's biomarker. Low Aβ42 indicates amyloid plaque formation; high pTau reflects neurofibrillary tangles. The ratio amplifies both signals." };
+    if (f.includes("csf_ptau") || f === "ptau")
+      return { title: "pTau-181 (CSF)", desc: "Phosphorylated tau in cerebrospinal fluid. Highly specific to Alzheimer's neurofibrillary tangle pathology — elevated levels strongly suggest AD." };
+    if (f.includes("csf_tau") || f === "tau")
+      return { title: "Total Tau (CSF)", desc: "Total tau protein in CSF. Elevated levels indicate active neuronal damage, though not specific to Alzheimer's — any neurodegenerative process can raise it." };
+    if (f.includes("abeta") || f.includes("abeta42"))
+      return { title: "Amyloid-beta 42 (CSF)", desc: "Aβ42 in CSF decreases as amyloid plaques accumulate in the brain, trapping the protein. One of the earliest detectable Alzheimer's changes." };
+    // Demographics / clinical
+    if (f === "age")
+      return { title: "Patient age", desc: "The single strongest non-modifiable risk factor. Risk roughly doubles every 5 years after age 65 — included by the model as a baseline prior." };
+    if (f.includes("educ"))
+      return { title: "Years of education", desc: "A proxy for cognitive reserve. Higher education correlates with delayed symptom onset and a greater ability to tolerate neurodegeneration before clinical signs appear." };
+    if (f.includes("sex"))
+      return { title: "Biological sex", desc: "Influences risk profiles and CSF biomarker baselines. Women have a higher lifetime AD risk, partly attributable to longer lifespan and post-menopausal hormonal changes." };
+    if (f.includes("apoe"))
+      return { title: "APOE e4 allele count", desc: "The strongest known genetic risk factor for late-onset AD. Each e4 copy roughly doubles risk; two copies (e4/e4) can increase lifetime risk up to 12-fold." };
+    // Temporal (slope) features
+    if (f.startsWith("temp_")) {
+      const side = f.includes("_l_") ? "left" : f.includes("_r_") ? "right" : "asymmetry";
+      if (f.includes("contrast"))    return { title: `Temporal contrast slope (${side})`, desc: `Rate of change in hippocampal GLCM contrast across visits (${side}). A rising slope indicates progressive texture heterogeneity — a marker of tissue degeneration over time.` };
+      if (f.includes("homogeneity")) return { title: `Temporal homogeneity slope (${side})`, desc: `Rate of change in texture uniformity across visits (${side}). Declining homogeneity over time suggests increasing microstructural disorganisation associated with neurodegeneration.` };
+      if (f.includes("energy"))      return { title: `Temporal energy slope (${side})`, desc: `Rate of change in textural regularity across visits (${side}). Falling energy indicates progressive loss of ordered hippocampal microstructure.` };
+      if (f.includes("correlation")) return { title: `Temporal correlation slope (${side})`, desc: `Rate of change in linear texture dependencies across visits (${side}). Tracks structural rearrangement of hippocampal tissue as atrophy progresses.` };
+      if (f.includes("entropy"))     return { title: `Temporal entropy slope (${side})`, desc: `Rate of change in texture disorder across visits (${side}). Increasing entropy over time signals growing microstructural complexity consistent with progressive atrophy.` };
+      return { title: `Temporal GLCM slope (${side})`, desc: `Longitudinal rate of change in a hippocampal radiomic feature (${side}). Temporal slopes are among the most predictive features for MCI-to-AD conversion.` };
+    }
+    // Static GLCM features
+    const side = f.startsWith("l_") || f.includes("_l_") || f.includes("left")   ? "left hippocampus"
+               : f.startsWith("r_") || f.includes("_r_") || f.includes("right")  ? "right hippocampus"
+               : f.startsWith("a_") || f.includes("_a_") || f.includes("asymm")  ? "L/R asymmetry"
+               : "hippocampus";
+    if (f.includes("contrast"))    return { title: `GLCM contrast (${side})`, desc: `Measures local intensity variation between neighbouring voxels in the ${side}. Higher values indicate more heterogeneous — potentially atrophied — tissue texture.` };
+    if (f.includes("homogeneity")) return { title: `GLCM homogeneity (${side})`, desc: `Measures texture uniformity in the ${side}. Lower homogeneity suggests irregular microstructure, which can be an early sign of hippocampal degeneration.` };
+    if (f.includes("energy") || f.includes("asm")) return { title: `GLCM energy (${side})`, desc: `Measures textural regularity (angular second moment) in the ${side}. Declining energy may reflect increasing disorganisation of hippocampal tissue.` };
+    if (f.includes("correlation")) return { title: `GLCM correlation (${side})`, desc: `Measures linear texture dependencies in the ${side}. Changes reflect structural rearrangement of the hippocampal matrix during neurodegeneration.` };
+    if (f.includes("entropy"))     return { title: `GLCM entropy (${side})`, desc: `Measures texture disorder/complexity in the ${side}. Higher entropy signals increasing microstructural irregularity associated with atrophy.` };
+    if (f.includes("dissimilarity")) return { title: `GLCM dissimilarity (${side})`, desc: `A linear variant of contrast in the ${side}. High values indicate irregular texture — a marker of tissue disorganisation.` };
+    return { title: feature, desc: "Radiomic feature extracted from hippocampal MRI used by the ensemble classifier." };
+  };
+
   const [overlayMode, setOverlayMode] = useState<OverlayMode>("Saliency");
   const [activeFeature, setActiveFeature] = useState<FeatureName>(null);
   const [barsMounted, setBarsMounted] = useState(false);
@@ -757,27 +801,32 @@ export default function ExplainPage() {
                 Top Model Features
               </div>
               <div className="mt-3 space-y-2">
-                {realFeats.map((f) => (
-                  <div
-                    key={f.feature}
-                    title={f.feature}
-                    className="group relative rounded-2xl border border-white/10 bg-white/5 p-2.5 transition-all duration-300 hover:scale-[1.02] hover:border-white/20 hover:bg-white/10"
-                  >
-                    <div className="mb-1 flex items-center justify-between text-sm">
-                      <span className="truncate pr-2 text-white/80">{f.label}</span>
-                      <span className="shrink-0 text-white/50">{(f.importance * 100).toFixed(0)}%</span>
+                {realFeats.map((f) => {
+                  const tip = featDescription(f.feature);
+                  return (
+                    <div
+                      key={f.feature}
+                      className="group relative rounded-2xl border border-white/10 bg-white/5 p-2.5 transition-all duration-300 hover:scale-[1.02] hover:border-white/20 hover:bg-white/10"
+                    >
+                      <div className="mb-1 flex items-center justify-between text-sm">
+                        <span className="truncate pr-2 text-white/80">{f.label}</span>
+                        <span className="shrink-0 text-white/50">{(f.importance * 100).toFixed(0)}%</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-white/5">
+                        <div
+                          className={cn("h-full rounded-full transition-[width] duration-700 ease-out", featColor(f.label))}
+                          style={{ width: barsMounted ? `${f.importance * 100}%` : "0%" }}
+                        />
+                      </div>
+                      {/* Rich tooltip */}
+                      <div className="pointer-events-none absolute left-1/2 top-0 z-20 hidden w-64 -translate-x-1/2 -translate-y-[calc(100%+10px)] rounded-xl border border-white/10 bg-[#0f0f18]/95 px-3 py-2.5 shadow-[0_0_24px_rgba(0,0,0,0.5)] backdrop-blur-md group-hover:block">
+                        <p className="mb-1 text-[11px] font-semibold text-white">{tip.title}</p>
+                        <p className="text-[10px] leading-relaxed text-white/55">{tip.desc}</p>
+                        <div className="mt-1.5 font-mono text-[9px] text-white/25">{f.feature}</div>
+                      </div>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-white/5">
-                      <div
-                        className={cn("h-full rounded-full transition-[width] duration-700 ease-out", featColor(f.label))}
-                        style={{ width: barsMounted ? `${f.importance * 100}%` : "0%" }}
-                      />
-                    </div>
-                    <div className="pointer-events-none absolute left-1/2 top-0 z-20 hidden w-56 -translate-x-1/2 -translate-y-[calc(100%+10px)] rounded-xl border border-white/10 bg-black/85 px-3 py-2 text-[11px] leading-5 text-white/75 shadow-[0_0_20px_rgba(0,0,0,0.35)] backdrop-blur-md group-hover:block">
-                      {f.feature}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ) : !liveCase ? (

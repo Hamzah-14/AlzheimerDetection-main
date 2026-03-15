@@ -85,6 +85,7 @@ export type ReportCase = {
   status: string;
   latency: string;
   summary: string;
+  ai_narrative?: string;
   notes: string;
   recommendation: string;
   explainability: string;

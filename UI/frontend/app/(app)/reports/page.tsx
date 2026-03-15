@@ -97,6 +97,7 @@ function buildLiveReport(c: AnalysisCase) {
     latency: "~3.2s",
     status: "Complete",
     summary,
+    ai_narrative: c.result.ai_narrative,
     recommendation,
     features,
     explainability: `The stacking ensemble cascade evaluated this case across ${final.cascade_stopped_at === "task1" ? "1 stage" : final.cascade_stopped_at === "task3" ? "2 stages" : "3 stages"}. Feature alignment used ${c.scans.length} longitudinal scan${c.scans.length > 1 ? "s" : ""} with a follow-up period derived from scan dates. Prediction stopped at ${final.cascade_stopped_at}.`,
@@ -392,9 +393,17 @@ export default function ReportsPage() {
             Executive Summary
           </div>
 
-          <p className="mt-4 text-sm leading-7 text-white/70">
-            {reportCase.summary}
-          </p>
+          {reportCase.ai_narrative ? (
+            <div className="mt-4">
+              <div className="mb-2 flex items-center gap-1.5">
+                <span className="rounded-md border border-purple-400/25 bg-purple-400/10 px-1.5 py-0.5 text-[10px] font-medium text-purple-300">AI Generated</span>
+                <span className="text-[10px] text-white/30">GPT-4o-mini · for clinical reference only</span>
+              </div>
+              <p className="text-sm leading-7 text-white/80">{reportCase.ai_narrative}</p>
+            </div>
+          ) : (
+            <p className="mt-4 text-sm leading-7 text-white/70">{reportCase.summary}</p>
+          )}
 
           <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
             <div className="text-xs text-white/50">Conclusion</div>

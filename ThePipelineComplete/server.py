@@ -34,6 +34,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, AsyncGenerator
 
+# Load .env if python-dotenv is available (optional convenience)
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+except ImportError:
+    pass
+
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -109,6 +116,67 @@ def _load_feature_importances():
         print(f"[server] feature_importances.json not found — run Feature_Importance.py first")
 
 _load_feature_importances()
+
+# ── OpenAI clinical narrative ─────────────────────────────────────────────────
+
+def _generate_narrative(results: dict, patient_data: dict) -> str:
+    """Call GPT-4o-mini to produce a concise clinical narrative for the report."""
+    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if not api_key:
+        return ""
+    try:
+        import openai
+    except ImportError:
+        print("[OpenAI] openai package not installed — run: pip install openai")
+        return ""
+
+    final       = results.get("final", {})
+    prediction  = final.get("prediction", "Unknown")
+    confidence  = final.get("confidence", 0.0)
+    conv_risk   = final.get("conversion_risk")
+    stopped_at  = final.get("cascade_stopped_at", "task1")
+    stages_run  = {"task1": 1, "task3": 2, "task2": 3}.get(stopped_at, 1)
+
+    age  = patient_data.get("age", "?")
+    sex  = "male" if patient_data.get("sex_encoded", 0) == 1.0 else "female"
+    edu  = patient_data.get("education", "?")
+    apoe = patient_data.get("apoe_e4_count")
+
+    # Collect top feature labels from all tasks
+    feat_labels: list[str] = []
+    for task_feats in results.get("feature_importances", {}).values():
+        for f in task_feats[:3]:
+            lbl = f.get("label", f.get("feature", ""))
+            if lbl and lbl not in feat_labels:
+                feat_labels.append(lbl)
+    feat_str = ", ".join(feat_labels[:5]) if feat_labels else "radiomic texture patterns"
+
+    apoe_str = f"APOE e4 copies: {int(apoe)}" if apoe is not None else "APOE not provided"
+    conv_str = f"Conversion risk: {conv_risk*100:.1f}%." if conv_risk is not None else ""
+
+    prompt = (
+        f"You are an AI assisting a neurologist by generating a structured report narrative.\n\n"
+        f"Patient: {age}-year-old {sex}, {edu} years education, {apoe_str}.\n"
+        f"Pipeline result: {prediction} (confidence {confidence*100:.1f}%, {stages_run}-stage cascade). {conv_str}\n"
+        f"Key contributing features: {feat_str}.\n\n"
+        f"Write a concise 3-sentence clinical narrative suitable for inclusion in a neurologist's report. "
+        f"Use precise, evidence-based language. Note this is AI-assisted analysis, not a standalone diagnosis. "
+        f"Do not use bullet points. Write in flowing clinical prose."
+    )
+
+    try:
+        client = openai.OpenAI(api_key=api_key)
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=220,
+            temperature=0.25,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as exc:
+        print(f"[OpenAI] Narrative generation failed: {exc}")
+        return ""
+
 
 # ── Job store (in-memory, single process) ─────────────────────────────────────
 # Each job_id → dict with keys: status, stages, result, error
@@ -310,6 +378,12 @@ def _run_pipeline(
             task: _FEATURE_IMPORTANCES.get(task, {}).get("top_features", [])
             for task in tasks_run
         }
+
+        # Generate AI narrative — runs after feature_importances is set so the
+        # prompt can include the top feature labels.
+        ai_narrative = _generate_narrative(results, patient_data)
+        if ai_narrative:
+            results["ai_narrative"] = ai_narrative
 
         _emit(job_id, "result", {"status": "success", "data": _clean(results)})
         _jobs[job_id]["status"] = "done"
