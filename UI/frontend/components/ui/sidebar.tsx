@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useTourStore } from "@/lib/tour-store";
+import { useAnalysisStore } from "@/lib/analysis-store";
 
 type NavItem = { label: string; href: string; icon: React.ElementType };
 type NavGroup = { id: string; heading: string; items: NavItem[] };
@@ -97,10 +98,17 @@ function NavLink({
 }
 
 /* ── Main sidebar ────────────────────────────────────────────── */
+// Pages that should deep-link to the latest real case when one exists
+const CASE_PAGES = new Set(["/viewer", "/explain", "/timeline", "/reports"]);
+
 export function Sidebar() {
   const pathname  = usePathname();
   const router    = useRouter();
   const startTour = useTourStore((s) => s.start);
+  const latestCase = useAnalysisStore((s) => s.latestCase());
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   const [collapsed,  setCollapsed]  = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(
@@ -109,6 +117,15 @@ export function Sidebar() {
 
   const toggleGroup = (id: string) =>
     setOpenGroups((prev) => ({ ...prev, [id]: !prev[id] }));
+
+  // Build a href that deep-links to the latest real case (if any).
+  // Only applied after mount so SSR and initial client render agree.
+  const smartHref = (base: string) => {
+    if (mounted && latestCase && CASE_PAGES.has(base)) {
+      return `${base}?case=${encodeURIComponent(latestCase.id)}&region=${encodeURIComponent(latestCase.region)}`;
+    }
+    return base;
+  };
 
   return (
     <aside
@@ -209,7 +226,7 @@ export function Sidebar() {
                         {group.items.map((item) => (
                           <NavLink
                             key={item.href}
-                            item={item}
+                            item={{ ...item, href: smartHref(item.href) }}
                             active={pathname === item.href}
                             collapsed={collapsed}
                           />

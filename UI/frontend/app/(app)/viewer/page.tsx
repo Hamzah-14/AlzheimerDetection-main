@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { VIEWER_DATA, type DatasetClass, type Plane } from "@/lib/cases";
 import { CaseSwitcher } from "@/components/ui/case-switcher";
+import { useAnalysisStore, type AnalysisCase } from "@/lib/analysis-store";
 import {
   Brain,
   Layers3,
@@ -24,6 +25,67 @@ import { usePageTitle } from "@/lib/use-page-title";
 
 // Types and data imported from @/lib/cases
 type CaseInfo = import("@/lib/cases").ViewerCase;
+
+function buildLiveViewer(c: AnalysisCase): CaseInfo {
+  const final    = c.result.final;
+  const pred     = final.prediction;
+  const conf     = final.confidence;
+  const task1    = c.result.task1;
+  const task3    = c.result.task3;
+  const task2    = c.result.task2;
+
+  const datasetClass: DatasetClass =
+    pred.includes("Alzheimer") ? "AD" :
+    pred.includes("MCI")       ? "MCI" : "NC";
+
+  const decision =
+    datasetClass === "AD"  ? "Alzheimer's Disease likely" :
+    datasetClass === "MCI" ? (task2?.label === "converting_MCI" ? "Converting MCI — High Risk" : "Stable MCI") :
+    "Cognitively Normal";
+
+  const adProb   = task1?.probabilities?.AD  ?? 0;
+  const mciProb  = task3?.probabilities?.MCI ?? 0;
+  const ncProb   = task1?.probabilities?.NC  ?? 0;
+  const convProb = task2?.probabilities?.converting_MCI ?? 0;
+
+  const recommendation =
+    datasetClass === "AD"
+      ? "Refer to specialist. Consider PET imaging and CSF biomarker confirmation."
+      : datasetClass === "MCI"
+      ? "Schedule 6-month follow-up MRI. Monitor with standardised cognitive assessments."
+      : "Routine monitoring as per standard clinical protocol.";
+
+  const summary =
+    `AD probability: ${(adProb*100).toFixed(1)}%, MCI probability: ${(mciProb*100).toFixed(1)}%. ` +
+    `Cascade stopped at ${final.cascade_stopped_at}. Final classification: ${pred}.`;
+
+  const notes =
+    `Patient: ${c.patient.age}yo ${c.patient.sex === "M" ? "male" : "female"}, ` +
+    `${c.patient.race || "race not recorded"}, ` +
+    `${c.patient.education} years education, APOE ${c.patient.apoe ?? "unknown"}. ` +
+    `${c.scans.length} longitudinal scan${c.scans.length > 1 ? "s" : ""} submitted.`;
+
+  return {
+    datasetClass,
+    decision,
+    confidence: conf,
+    region: c.region,
+    latency: "~3.2s",
+    status: "Complete",
+    summary,
+    notes,
+    recommendation,
+    defaultPlane: "Axial",
+    defaultSlice: 32,
+    defaultOverlayOpacity: 0.7,
+    features: [
+      { name: "AD Probability",     value: adProb,   color: "bg-red-400" },
+      { name: "MCI Probability",    value: mciProb,  color: "bg-amber-400" },
+      { name: "Normal Probability", value: ncProb,   color: "bg-cyan-400" },
+      { name: "Conversion Risk",    value: convProb, color: "bg-purple-400" },
+    ],
+  };
+}
 
 function riskTheme(datasetClass: DatasetClass) {
   if (datasetClass === "AD") {
@@ -154,13 +216,23 @@ export default function ViewerPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const caseId = searchParams.get("case") || "AUD-0231";
+  const caseId         = searchParams.get("case") || "AUD-0231";
   const fallbackRegion = searchParams.get("region") || "Bilateral Hippocampus";
 
-  const caseInfo = VIEWER_DATA[caseId] || {
-    ...VIEWER_DATA["AUD-0231"],
-    region: fallbackRegion,
-  };
+  const [storeReady, setStoreReady] = useState(false);
+  useEffect(() => { setStoreReady(true); }, []);
+
+  const storeCase  = useAnalysisStore((s) => s.getCase(caseId));
+  const latestCase = useAnalysisStore((s) => s.latestCase());
+
+  const liveCase: AnalysisCase | undefined = !storeReady ? undefined
+    : storeCase ?? ((!caseId || !VIEWER_DATA[caseId]) ? latestCase : undefined);
+
+  const caseInfo: CaseInfo = liveCase
+    ? buildLiveViewer(liveCase)
+    : VIEWER_DATA[caseId] ?? { ...VIEWER_DATA["AUD-0231"], region: fallbackRegion };
+
+  const displayCaseId = liveCase?.id ?? caseId;
 
   const [plane, setPlane] = useState<Plane>(caseInfo.defaultPlane);
   const [slice, setSlice] = useState(caseInfo.defaultSlice);
@@ -224,7 +296,7 @@ export default function ViewerPage() {
 
         <div className="flex flex-wrap gap-2">
           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs text-white/70">
-            Case: <span className="text-white/90">{caseId}</span> • Volume:{" "}
+            Case: <span className="text-white/90">{displayCaseId}</span> • Volume:{" "}
             <span className="text-white/90">2 × 64 × 64 × 64</span>
           </div>
           <div className="rounded-2xl border border-emerald-400/15 bg-emerald-400/[0.06] px-4 py-2 text-xs text-emerald-200/80">
@@ -234,7 +306,7 @@ export default function ViewerPage() {
         </div>
       </div>
 
-      <CaseSwitcher currentCaseId={caseId} />
+      <CaseSwitcher currentCaseId={displayCaseId} />
 
       <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[1.45fr_0.9fr]">
         <div className="space-y-5">
@@ -400,7 +472,7 @@ export default function ViewerPage() {
                 onClick={() =>
                   router.push(
                     `/explain?case=${encodeURIComponent(
-                      caseId
+                      displayCaseId
                     )}&region=${encodeURIComponent(caseInfo.region)}`
                   )
                 }
@@ -414,7 +486,7 @@ export default function ViewerPage() {
                 onClick={() =>
                   router.push(
                     `/reports?case=${encodeURIComponent(
-                      caseId
+                      displayCaseId
                     )}&region=${encodeURIComponent(caseInfo.region)}`
                   )
                 }
@@ -464,7 +536,7 @@ export default function ViewerPage() {
           <div className="glass pulse-trigger rounded-[28px] p-5">
             <div className="flex items-center gap-2 text-sm text-white/70">
               <Activity className="h-4 w-4 text-white/50" />
-              Radiomic Features
+              Classification Probabilities
             </div>
 
             <div className="mt-4 space-y-4">
@@ -512,7 +584,7 @@ export default function ViewerPage() {
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="text-xs text-white/50">Region</div>
+                <div className="text-xs text-white/50">Target ROI</div>
                 <div className="mt-1 text-sm font-medium text-white">
                   Bilateral Hippocampi
                 </div>
@@ -574,7 +646,7 @@ export default function ViewerPage() {
                 onClick={() =>
                   router.push(
                     `/explain?case=${encodeURIComponent(
-                      caseId
+                      displayCaseId
                     )}&region=${encodeURIComponent(caseInfo.region)}`
                   )
                 }

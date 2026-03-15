@@ -66,6 +66,7 @@ export type ViewerCase = {
 };
 
 export type ExplainCase = {
+  datasetClass: DatasetClass;
   region: string;
   confidence: number;
   decision: string;
@@ -265,6 +266,7 @@ export const VIEWER_DATA: Record<string, ViewerCase> = {
 
 export const EXPLAIN_DATA: Record<string, ExplainCase> = {
   "AUD-0231": {
+    datasetClass: "AD",
     region: "Hippocampus",
     confidence: 0.78,
     decision: "High-risk pattern detected",
@@ -310,6 +312,7 @@ export const EXPLAIN_DATA: Record<string, ExplainCase> = {
     ],
   },
   "AUD-0230": {
+    datasetClass: "MCI",
     region: "Hippocampus",
     confidence: 0.63,
     decision: "Moderate risk indication",
@@ -355,6 +358,7 @@ export const EXPLAIN_DATA: Record<string, ExplainCase> = {
     ],
   },
   "AUD-0229": {
+    datasetClass: "NC",
     region: "Temporal",
     confidence: 0.34,
     decision: "Low-risk pattern",
@@ -400,6 +404,7 @@ export const EXPLAIN_DATA: Record<string, ExplainCase> = {
     ],
   },
   "AUD-0228": {
+    datasetClass: "AD",
     region: "Hippocampus",
     confidence: 0.72,
     decision: "High-risk case pending review",

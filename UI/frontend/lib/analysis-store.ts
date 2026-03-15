@@ -23,11 +23,22 @@ export interface FinalResult {
   mci_status?: string;
 }
 
+export interface FeatureImportanceEntry {
+  rank:       number;
+  feature:    string;
+  label:      string;
+  importance: number;
+}
+
 export interface CascadeResult {
   task1?: TaskResult;
   task2?: TaskResult;
   task3?: TaskResult;
   final: FinalResult;
+  /** Mean GLCM values per side+feature, keyed as "L_contrast", "R_homogeneity", etc. */
+  glcm_summary?: Record<string, number>;
+  /** Consensus feature importances for each cascade task that ran, top 15 each. */
+  feature_importances?: Record<string, FeatureImportanceEntry[]>;
 }
 
 export interface AnalysisCase {
@@ -62,10 +73,15 @@ interface AnalysisStore {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-let _caseCounter = 233; // starts at AUD-0233 so it doesn't clash with static demo data
-
 export function generateCaseId(): string {
-  return `AUD-0${_caseCounter++}`;
+  // Base the number on the highest ID already in the store so page
+  // reloads never produce a duplicate (module-level counters reset to 233).
+  const existing = useAnalysisStore.getState().cases;
+  const max = existing.reduce((m, c) => {
+    const n = parseInt(c.id.replace(/\D/g, ""), 10);
+    return isNaN(n) ? m : Math.max(m, n);
+  }, 232);
+  return `AUD-0${max + 1}`;
 }
 
 export function deriveRisk(result: CascadeResult): "High" | "Medium" | "Low" {

@@ -1,5 +1,5 @@
 "use client";
-import { useAnalysisStore, type AnalysisCase } from "@/lib/analysis-store";
+import { useAnalysisStore, type AnalysisCase, type FeatureImportanceEntry, type CascadeResult } from "@/lib/analysis-store";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -10,9 +10,9 @@ import {
   Activity,
   ChevronRight,
   Cpu,
-  Sparkles,
   Eye,
   ShieldCheck,
+  GitBranch,
 } from "lucide-react";
 import { usePageTitle } from "@/lib/use-page-title";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -98,6 +98,250 @@ function FakeExplainHeatmap({
   );
 }
 
+// ── Cascade Decision Pathway ──────────────────────────────────────────────
+function CascadeFlow({ result }: { result: CascadeResult }) {
+  const { task1, task3, task2, final } = result;
+  const stopped = final.cascade_stopped_at;
+
+  const adPct  = Math.round((task1?.probabilities?.AD  ?? 0) * 100);
+  const nadPct = Math.round((task1?.probabilities?.NC  ?? 0) * 100);
+  const mciPct = Math.round((task3?.probabilities?.MCI ?? 0) * 100);
+  const ncPct  = Math.round((task3?.probabilities?.NC  ?? 0) * 100);
+
+  // task2 class names vary by model — grab first two entries
+  const t2entries = Object.entries(task2?.probabilities ?? {});
+  const [t2la, t2pa] = t2entries[0] ?? ["Converting", 0];
+  const [t2lb, t2pb] = t2entries[1] ?? ["Stable",     0];
+  const t2pctA = Math.round(Number(t2pa) * 100);
+  const t2pctB = Math.round(Number(t2pb) * 100);
+
+  const outcomeColor =
+    final.prediction.includes("Alzheimer") ? "red" :
+    final.prediction.includes("MCI")       ? "amber" : "cyan";
+
+  return (
+    <div className="space-y-2">
+      {/* Stage 1 */}
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-xs font-medium uppercase tracking-wide text-white/50">Stage 1 · AD Screening</span>
+          <span className={cn("rounded-md px-2 py-0.5 text-[10px]",
+            stopped === "task1"
+              ? "bg-red-400/15 text-red-300"
+              : "bg-emerald-400/10 text-emerald-400"
+          )}>
+            {stopped === "task1" ? "Decision made" : "Passed ✓"}
+          </span>
+        </div>
+        <div className="flex gap-3">
+          <div className="flex-1 space-y-1">
+            <div className="text-[10px] text-white/40">Alzheimer's</div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
+              <div className="h-full rounded-full bg-red-400/70" style={{ width: `${adPct}%` }} />
+            </div>
+            <div className="text-[11px] font-medium text-red-300">{adPct}%</div>
+          </div>
+          <div className="flex-1 space-y-1">
+            <div className="text-[10px] text-white/40">Non-AD</div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
+              <div className="h-full rounded-full bg-cyan-400/70" style={{ width: `${nadPct}%` }} />
+            </div>
+            <div className="text-[11px] font-medium text-cyan-300">{nadPct}%</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Connector */}
+      <div className="flex items-center gap-2 px-3">
+        <div className="h-px flex-1 bg-white/8" />
+        <span className="text-[10px] text-white/30">
+          {stopped === "task1" ? "AD ≥ 65% → stopped" : "Non-AD → continue"}
+        </span>
+        <div className="h-px flex-1 bg-white/8" />
+      </div>
+
+      {/* Stage 3 (if ran) */}
+      {(stopped === "task3" || stopped === "task2") && (
+        <>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wide text-white/50">Stage 3 · MCI vs Normal</span>
+              <span className={cn("rounded-md px-2 py-0.5 text-[10px]",
+                stopped === "task3"
+                  ? "bg-amber-400/15 text-amber-300"
+                  : "bg-emerald-400/10 text-emerald-400"
+              )}>
+                {stopped === "task3" ? "Decision made" : "MCI → continue ✓"}
+              </span>
+            </div>
+            <div className="flex gap-3">
+              <div className="flex-1 space-y-1">
+                <div className="text-[10px] text-white/40">MCI</div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
+                  <div className="h-full rounded-full bg-amber-400/70" style={{ width: `${mciPct}%` }} />
+                </div>
+                <div className="text-[11px] font-medium text-amber-300">{mciPct}%</div>
+              </div>
+              <div className="flex-1 space-y-1">
+                <div className="text-[10px] text-white/40">Normal</div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
+                  <div className="h-full rounded-full bg-cyan-400/70" style={{ width: `${ncPct}%` }} />
+                </div>
+                <div className="text-[11px] font-medium text-cyan-300">{ncPct}%</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Stage 2 (if ran) */}
+          {stopped === "task2" && (
+            <>
+              <div className="flex items-center gap-2 px-3">
+                <div className="h-px flex-1 bg-white/8" />
+                <span className="text-[10px] text-white/30">MCI ≥ 55% → progression check</span>
+                <div className="h-px flex-1 bg-white/8" />
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs font-medium uppercase tracking-wide text-white/50">Stage 2 · MCI Progression</span>
+                  <span className="rounded-md bg-purple-400/15 px-2 py-0.5 text-[10px] text-purple-300">Final stage</span>
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex-1 space-y-1">
+                    <div className="text-[10px] text-white/40">{t2la}</div>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
+                      <div className="h-full rounded-full bg-red-400/70" style={{ width: `${t2pctA}%` }} />
+                    </div>
+                    <div className="text-[11px] font-medium text-red-300">{t2pctA}%</div>
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <div className="text-[10px] text-white/40">{t2lb}</div>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
+                      <div className="h-full rounded-full bg-green-400/70" style={{ width: `${t2pctB}%` }} />
+                    </div>
+                    <div className="text-[11px] font-medium text-green-300">{t2pctB}%</div>
+                  </div>
+                </div>
+                {final.conversion_risk !== undefined && (
+                  <div className="mt-2 text-[10px] text-white/40">
+                    Conversion risk: <span className="text-amber-300">{Math.round(final.conversion_risk * 100)}%</span>
+                    {final.mci_status && <span className="ml-2 text-white/50">· {final.mci_status}</span>}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      {/* Final outcome */}
+      <div className={cn("flex items-center gap-3 rounded-2xl border p-3",
+        outcomeColor === "red"   ? "border-red-400/25 bg-red-500/8" :
+        outcomeColor === "amber" ? "border-amber-400/25 bg-amber-500/8" :
+        "border-cyan-400/25 bg-cyan-500/8"
+      )}>
+        <div className={cn("h-2.5 w-2.5 shrink-0 rounded-full",
+          outcomeColor === "red"   ? "bg-red-400" :
+          outcomeColor === "amber" ? "bg-amber-400" : "bg-cyan-400"
+        )} />
+        <div className="flex-1">
+          <div className={cn("text-sm font-semibold",
+            outcomeColor === "red"   ? "text-red-300" :
+            outcomeColor === "amber" ? "text-amber-300" : "text-cyan-300"
+          )}>
+            {final.prediction}
+          </div>
+          <div className="mt-0.5 text-[10px] text-white/35">
+            {Math.round(final.confidence * 100)}% confidence · stopped at {stopped}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── L–R Asymmetry Panel ───────────────────────────────────────────────────
+const GLCM_METRICS = [
+  { key: "contrast",    label: "Contrast",    note: "Local intensity variation" },
+  { key: "homogeneity", label: "Homogeneity", note: "Texture uniformity" },
+  { key: "energy",      label: "Energy",      note: "Texture compactness" },
+  { key: "correlation", label: "Correlation", note: "Spatial dependency" },
+] as const;
+
+function AsymmetryPanel({ glcm }: { glcm: Record<string, number> }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), 120);
+    return () => clearTimeout(t);
+  }, []);
+
+  const pairs = GLCM_METRICS.map((m) => {
+    const L = glcm[`L_${m.key}`] ?? 0;
+    const R = glcm[`R_${m.key}`] ?? 0;
+    const maxLR = Math.max(L, R, 1e-9);
+    const avg   = (L + R) / 2 || 1e-9;
+    const asymPct = ((L - R) / avg) * 100;
+    return { ...m, L, R, maxLR, asymPct };
+  }).filter((m) => m.L !== 0 || m.R !== 0);
+
+  if (pairs.length === 0) return null;
+
+  return (
+    <div className="glass rounded-[26px] p-4">
+      <div className="mb-1 flex items-center gap-2 text-sm text-white/70">
+        <Activity className="h-4 w-4 text-white/50" />
+        L–R Hippocampal Asymmetry
+      </div>
+      <p className="mb-3 text-xs text-white/40">
+        Bilateral GLCM comparison — texture asymmetry between hemispheres is a key neurodegeneration biomarker.
+      </p>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {pairs.map((p) => {
+          const lPct   = Math.round((p.L / p.maxLR) * 100);
+          const rPct   = Math.round((p.R / p.maxLR) * 100);
+          const absAsym = Math.abs(p.asymPct);
+          const asymColor =
+            absAsym > 20 ? "text-red-400" :
+            absAsym > 10 ? "text-amber-400" : "text-cyan-400";
+          const dominant = p.L > p.R ? "L" : p.R > p.L ? "R" : "—";
+          return (
+            <div key={p.key} className="rounded-2xl border border-white/10 bg-white/5 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs font-medium text-white/70">{p.label}</span>
+                <span className={cn("text-[11px] font-semibold", asymColor)}>
+                  {absAsym.toFixed(1)}% {dominant !== "—" && <span className="font-normal text-white/40">({dominant} dom.)</span>}
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 text-[10px] text-blue-400">L</span>
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/5">
+                    <div
+                      className="h-full rounded-full bg-blue-400/70 transition-[width] duration-500 ease-out"
+                      style={{ width: mounted ? `${lPct}%` : "0%" }}
+                    />
+                  </div>
+                  <span className="w-7 text-right text-[10px] text-white/45">{lPct}%</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-3 text-[10px] text-purple-400">R</span>
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/5">
+                    <div
+                      className="h-full rounded-full bg-purple-400/70 transition-[width] duration-500 ease-out"
+                      style={{ width: mounted ? `${rPct}%` : "0%" }}
+                    />
+                  </div>
+                  <span className="w-7 text-right text-[10px] text-white/45">{rPct}%</span>
+                </div>
+              </div>
+              <div className="mt-2 text-[10px] text-white/30">{p.note}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function buildLiveExplain(c: AnalysisCase) {
   const final    = c.result.final;
   const pred     = final.prediction;
@@ -112,12 +356,41 @@ function buildLiveExplain(c: AnalysisCase) {
   const adProb  = task1?.probabilities?.AD  ?? 0;
   const mciProb = task3?.probabilities?.MCI ?? 0;
   const ncProb  = task1?.probabilities?.NC  ?? 0;
+  const glcm    = c.result.glcm_summary ?? {};
+
+  // Normalise real GLCM values to 0–1 using approximate population ranges.
+  // Falls back to probability-derived value only when glcm_summary is absent
+  // (older store entries that pre-date the glcm_summary field).
+  const norm = (key: string, lo: number, hi: number, fallback: number) => {
+    const v = glcm[key];
+    return v !== undefined ? Math.min(1, Math.max(0, (v - lo) / (hi - lo))) : fallback;
+  };
 
   const features = [
-    { name: "Contrast"     as const, value: adProb,   color: "bg-red-400",    note: "Local intensity variation — primary AD texture signal",         tooltip: "High contrast in hippocampal texture is strongly associated with neurodegeneration patterns seen in AD." },
-    { name: "Homogeneity"  as const, value: 1-mciProb, color: "bg-purple-400", note: "Structural uniformity — drops with tissue degradation",          tooltip: "Reduced homogeneity indicates loss of tissue regularity, common in MCI and AD." },
-    { name: "Energy"       as const, value: ncProb,   color: "bg-cyan-400",   note: "Texture compactness — higher in healthy tissue",                  tooltip: "Energy reflects texture concentration. Lower energy aligns with abnormal tissue patterns." },
-    { name: "Correlation"  as const, value: conf,     color: "bg-emerald-400", note: "Spatial dependency — secondary feature supporting decision",      tooltip: "Correlation captures the linear spatial relationship between voxel intensity values across the hippocampus." },
+    {
+      name: "Contrast" as const, color: "bg-red-400",
+      value: norm("L_contrast", 0, 80, adProb),
+      note: "Mean bilateral GLCM contrast (L hippocampus, all blocks & distances)",
+      tooltip: "Higher contrast indicates greater local intensity variation — a key texture marker elevated in neurodegeneration.",
+    },
+    {
+      name: "Homogeneity" as const, color: "bg-purple-400",
+      value: norm("L_homogeneity", 0.3, 1.0, 1 - mciProb),
+      note: "Mean bilateral GLCM homogeneity (L hippocampus)",
+      tooltip: "Homogeneity measures texture uniformity. Values drop with tissue degradation typical of MCI and AD.",
+    },
+    {
+      name: "Energy" as const, color: "bg-cyan-400",
+      value: norm("L_energy", 0, 0.5, ncProb),
+      note: "Mean bilateral GLCM energy (L hippocampus)",
+      tooltip: "Energy captures texture compactness. Healthy hippocampal tissue tends to show higher energy values.",
+    },
+    {
+      name: "Correlation" as const, color: "bg-emerald-400",
+      value: norm("L_correlation", -0.2, 1.0, conf),
+      note: "Mean bilateral GLCM correlation (L hippocampus)",
+      tooltip: "Correlation reflects spatial linear dependency between voxel intensities across hippocampal sub-regions.",
+    },
   ];
 
   const decision =
@@ -148,6 +421,7 @@ function buildLiveExplain(c: AnalysisCase) {
     action,
     rationale,
     features,
+    featureImportances: c.result.feature_importances ?? {},
   };
 }
 
@@ -159,11 +433,14 @@ export default function ExplainPage() {
   const caseId         = searchParams.get("case") || "AUD-0231";
   const fallbackRegion = searchParams.get("region") || "Hippocampus";
 
+  const [storeReady, setStoreReady] = useState(false);
+  useEffect(() => { setStoreReady(true); }, []);
+
   const storeCase  = useAnalysisStore((s) => s.getCase(caseId));
   const latestCase = useAnalysisStore((s) => s.latestCase());
 
-  const liveCase: AnalysisCase | undefined =
-    storeCase ?? ((!caseId || !EXPLAIN_DATA[caseId]) ? latestCase : undefined);
+  const liveCase: AnalysisCase | undefined = !storeReady ? undefined
+    : storeCase ?? ((!caseId || !EXPLAIN_DATA[caseId]) ? latestCase : undefined);
 
   const explainCase = liveCase
     ? buildLiveExplain(liveCase)
@@ -173,6 +450,29 @@ export default function ExplainPage() {
   const showEmpty = !liveCase && !EXPLAIN_DATA[caseId];
 
   const features = useMemo(() => explainCase.features, [explainCase]);
+
+  // Real feature importances from the model — flattened across tasks, deduplicated, top 8
+  const rawImportances = liveCase?.result?.feature_importances ?? {};
+  const realFeats = useMemo<FeatureImportanceEntry[]>(() => {
+    const seen = new Set<string>();
+    const all: FeatureImportanceEntry[] = [];
+    for (const task of ["task1", "task3", "task2"]) {
+      for (const e of rawImportances[task] ?? []) {
+        if (!seen.has(e.feature)) { seen.add(e.feature); all.push(e); }
+      }
+    }
+    return all.sort((a, b) => b.importance - a.importance).slice(0, 8);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveCase]);
+  const hasRealFeats = realFeats.length > 0;
+
+  const featColor = (label: string) => {
+    if (label.startsWith("CSF"))       return "bg-red-400";
+    if (label.startsWith("Asymmetry")) return "bg-amber-400";
+    if (label.startsWith("Temporal"))  return "bg-purple-400";
+    return "bg-cyan-400";
+  };
+
   const [overlayMode, setOverlayMode] = useState<OverlayMode>("Saliency");
   const [activeFeature, setActiveFeature] = useState<FeatureName>(null);
   const [barsMounted, setBarsMounted] = useState(false);
@@ -192,7 +492,7 @@ export default function ExplainPage() {
     const featureLines = features
       .map(
         (f) =>
-          `  ${f.name.padEnd(16)}${String(Math.round(f.score * 100)).padStart(3)}%  — ${f.note}`
+          `  ${f.name.padEnd(16)}${String(Math.round(f.value * 100)).padStart(3)}%  — ${f.note}`
       )
       .join("\n");
 
@@ -203,7 +503,7 @@ export default function ExplainPage() {
       "══════════════════════════════════════════════════",
       "",
       "PREDICTION",
-      `  Dataset Class   ${explainCase.datasetClass}`,
+      `  Dataset Class   ${explainCase.datasetClass ?? "Unknown"}`,
       `  Decision        ${explainCase.decision}`,
       `  Confidence      ${Math.round(explainCase.confidence * 100)}%`,
       `  Region          ${explainCase.region}`,
@@ -274,7 +574,7 @@ export default function ExplainPage() {
 
         <div className="flex flex-wrap gap-2">
           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs text-white/70">
-            Case: <span className="text-white/90">{displayCaseId}</span> • Region:{" "}
+            Case: <span className="text-white/90">{displayCaseId}</span> • Target ROI:{" "}
             <span className="text-white/90">{explainCase.region}</span>
           </div>
           <button
@@ -396,23 +696,27 @@ export default function ExplainPage() {
 
           <div className="glass rounded-[26px] p-4">
             <div className="mb-3 flex items-center gap-2 text-sm text-white/70">
-              <Sparkles className="h-4 w-4 text-white/50" />
-              Why the Model Flagged This Case
+              <GitBranch className="h-4 w-4 text-white/50" />
+              Cascade Decision Pathway
             </div>
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              {explainCase.rationale.map((item, index) => (
-                <div
-                  key={index}
-                  className="rounded-2xl border border-white/10 bg-white/5 p-4"
-                >
-                  <div className="text-xs text-white/50">
-                    Reason {index + 1}
+            {liveCase ? (
+              <CascadeFlow result={liveCase.result} />
+            ) : (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                {explainCase.rationale.map((item, index) => (
+                  <div
+                    key={index}
+                    className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                  >
+                    <div className="text-xs text-white/50">
+                      Reason {index + 1}
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-white/70">{item}</p>
                   </div>
-                  <p className="mt-2 text-sm leading-6 text-white/70">{item}</p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -443,50 +747,77 @@ export default function ExplainPage() {
             </p>
           </div>
 
-          <div className="glass rounded-[26px] p-3">
-            <div className="flex items-center gap-2 text-sm text-white/70">
-              <Activity className="h-4 w-4 text-white/50" />
-              Top Radiomic Features
+          {/* Show real model feature importances when available.
+              For live cases without importances, hide this panel entirely.
+              For static demo cases, show illustrative GLCM bars. */}
+          {hasRealFeats ? (
+            <div className="glass rounded-[26px] p-3">
+              <div className="flex items-center gap-2 text-sm text-white/70">
+                <Activity className="h-4 w-4 text-white/50" />
+                Top Model Features
+              </div>
+              <div className="mt-3 space-y-2">
+                {realFeats.map((f) => (
+                  <div
+                    key={f.feature}
+                    title={f.feature}
+                    className="group relative rounded-2xl border border-white/10 bg-white/5 p-2.5 transition-all duration-300 hover:scale-[1.02] hover:border-white/20 hover:bg-white/10"
+                  >
+                    <div className="mb-1 flex items-center justify-between text-sm">
+                      <span className="truncate pr-2 text-white/80">{f.label}</span>
+                      <span className="shrink-0 text-white/50">{(f.importance * 100).toFixed(0)}%</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-white/5">
+                      <div
+                        className={cn("h-full rounded-full transition-[width] duration-700 ease-out", featColor(f.label))}
+                        style={{ width: barsMounted ? `${f.importance * 100}%` : "0%" }}
+                      />
+                    </div>
+                    <div className="pointer-events-none absolute left-1/2 top-0 z-20 hidden w-56 -translate-x-1/2 -translate-y-[calc(100%+10px)] rounded-xl border border-white/10 bg-black/85 px-3 py-2 text-[11px] leading-5 text-white/75 shadow-[0_0_20px_rgba(0,0,0,0.35)] backdrop-blur-md group-hover:block">
+                      {f.feature}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-
-            <div className="mt-3 space-y-2">
-              {features.map((f) => (
-                <div
-                  key={f.name}
-                  onMouseEnter={() => setActiveFeature(f.name)}
-                  onMouseLeave={() => setActiveFeature(null)}
-                  className={cn(
-                    "group relative cursor-pointer rounded-2xl border border-white/10 bg-white/5 p-2.5 transition-all duration-300 hover:scale-[1.02]",
-                    activeFeature === f.name &&
-                      "border-white/20 bg-white/10 shadow-[0_0_22px_rgba(255,255,255,0.06)]"
-                  )}
-                >
-                  <div className="mb-1 flex items-center justify-between text-sm">
-                    <span className="text-white/80">{f.name}</span>
-                    <span className="text-white/50">
-                      {(f.value * 100).toFixed(0)}%
-                    </span>
+          ) : !liveCase ? (
+            /* Demo case — illustrative GLCM bars */
+            <div className="glass rounded-[26px] p-3">
+              <div className="flex items-center gap-2 text-sm text-white/70">
+                <Activity className="h-4 w-4 text-white/50" />
+                GLCM Texture Features
+                <span className="ml-auto rounded-md bg-white/5 px-1.5 py-0.5 text-[10px] text-white/35">Demo</span>
+              </div>
+              <div className="mt-3 space-y-2">
+                {features.map((f) => (
+                  <div
+                    key={f.name}
+                    onMouseEnter={() => setActiveFeature(f.name)}
+                    onMouseLeave={() => setActiveFeature(null)}
+                    className={cn(
+                      "group relative cursor-pointer rounded-2xl border border-white/10 bg-white/5 p-2.5 transition-all duration-300 hover:scale-[1.02]",
+                      activeFeature === f.name && "border-white/20 bg-white/10 shadow-[0_0_22px_rgba(255,255,255,0.06)]"
+                    )}
+                  >
+                    <div className="mb-1 flex items-center justify-between text-sm">
+                      <span className="text-white/80">{f.name}</span>
+                      <span className="text-white/50">{(f.value * 100).toFixed(0)}%</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-white/5">
+                      <div
+                        className={cn("h-full rounded-full transition-[width] duration-700 ease-out", f.color)}
+                        style={{ width: barsMounted ? `${f.value * 100}%` : "0%" }}
+                      />
+                    </div>
+                    <div className="mt-1.5 text-xs text-white/55">{f.note}</div>
+                    <div className="pointer-events-none absolute left-1/2 top-0 z-20 hidden w-56 -translate-x-1/2 -translate-y-[calc(100%+10px)] rounded-xl border border-white/10 bg-black/85 px-3 py-2 text-[11px] leading-5 text-white/75 shadow-[0_0_20px_rgba(0,0,0,0.35)] backdrop-blur-md group-hover:block">
+                      {f.tooltip}
+                    </div>
                   </div>
-
-                  <div className="h-2 overflow-hidden rounded-full bg-white/5">
-                    <div
-                      className={cn(
-                        "h-full rounded-full transition-[width] duration-700 ease-out",
-                        f.color
-                      )}
-                      style={{ width: barsMounted ? `${f.value * 100}%` : "0%" }}
-                    />
-                  </div>
-
-                  <div className="mt-1.5 text-xs text-white/55">{f.note}</div>
-
-                  <div className="pointer-events-none absolute left-1/2 top-0 z-20 hidden w-56 -translate-x-1/2 -translate-y-[calc(100%+10px)] rounded-xl border border-white/10 bg-black/85 px-3 py-2 text-[11px] leading-5 text-white/75 shadow-[0_0_20px_rgba(0,0,0,0.35)] backdrop-blur-md group-hover:block">
-                    {f.tooltip}
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          ) : null /* live case but no importances — panel omitted */}
 
           <div className="glass rounded-[26px] bg-gradient-to-br from-white/10 to-white/5 p-4">
             <div className="flex items-center gap-2 text-sm text-white/70">
@@ -509,6 +840,11 @@ export default function ExplainPage() {
           </div>
         </div>
       </div>
+
+      {/* L–R Asymmetry — full width, live cases with GLCM data only */}
+      {liveCase && Object.keys(liveCase.result.glcm_summary ?? {}).length > 0 && (
+        <AsymmetryPanel glcm={liveCase.result.glcm_summary!} />
+      )}
     </div>
   );
 }

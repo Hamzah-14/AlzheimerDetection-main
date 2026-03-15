@@ -1,6 +1,6 @@
 "use client";
 import { useAnalysisStore, type AnalysisCase } from "@/lib/analysis-store";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
@@ -128,11 +128,14 @@ export default function TimelinePage() {
   const router = useRouter();
   const caseId        = searchParams.get("case") || "AUD-0231";
   const fallbackRegion = searchParams.get("region") || "Bilateral Hippocampus";
+  const [storeReady, setStoreReady] = useState(false);
+  useEffect(() => { setStoreReady(true); }, []);
+
   const storeCase  = useAnalysisStore((s) => s.getCase(caseId));
   const latestCase = useAnalysisStore((s) => s.latestCase());
 
-  const liveCase: AnalysisCase | undefined =
-    storeCase ?? ((!caseId || !TIMELINE_DATA[caseId]) ? latestCase : undefined);
+  const liveCase: AnalysisCase | undefined = !storeReady ? undefined
+    : storeCase ?? ((!caseId || !TIMELINE_DATA[caseId]) ? latestCase : undefined);
 
   const caseInfo = liveCase
     ? buildLiveTimeline(liveCase)

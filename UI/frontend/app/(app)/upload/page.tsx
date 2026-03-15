@@ -293,6 +293,8 @@ export default function UploadPage() {
     );
   };
 
+  const hasRunningJob = jobs.some(j => j.state === "running");
+
   const jobStageStatus = (job:Job,i:number):"complete"|"active"|"pending" =>
     job.completedStages.includes(i)?"complete":job.activeStage===i?"active":"pending";
 
@@ -468,8 +470,8 @@ export default function UploadPage() {
               })}
               <div className="flex gap-3">
                 <button type="button" onClick={()=>setStep(2)} className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/60 hover:text-white transition"><ChevronLeft className="h-4 w-4"/> Back</button>
-                <button type="button" onClick={()=>step3Valid&&runPipeline()} disabled={!step3Valid} className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-medium text-white hover:bg-white/15 transition">
-                  <Zap className="h-4 w-4"/> Run Analysis Pipeline
+                <button type="button" onClick={()=>step3Valid&&!hasRunningJob&&runPipeline()} disabled={!step3Valid||hasRunningJob} className={cn("flex flex-1 items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-medium transition",hasRunningJob?"border-cyan-400/20 bg-cyan-400/[0.06] text-cyan-300/60 cursor-not-allowed":"border-white/10 bg-white/10 text-white hover:bg-white/15")}>
+                  {hasRunningJob?(<><span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-cyan-400/30 border-t-cyan-400"/>Pipeline running…</>):(<><Zap className="h-4 w-4"/>Run Analysis Pipeline</>)}
                 </button>
               </div>
             </div>
@@ -488,10 +490,11 @@ export default function UploadPage() {
           )}
 
           {jobs.map((job)=>{
-            const final     = job.result?.final as Record<string,unknown>|undefined;
-            const pred       = final?.prediction as string|undefined;
-            const conf       = final?.confidence as number|undefined;
-            const convRisk   = final?.conversion_risk as number|undefined;
+            const final       = job.result?.final as Record<string,unknown>|undefined;
+            const pred        = final?.prediction as string|undefined;
+            const conf        = final?.confidence as number|undefined;
+            const convRisk    = final?.conversion_risk as number|undefined;
+            const regQc       = job.result?.registration_qc as { ncc_per_scan: number[]; ncc_warnings: string[]; ncc_pass: boolean }|undefined;
             const isAD       = pred?.includes("Alzheimer");
             const isCN       = pred?.includes("Normal");
             const resultClass= isAD?"border-red-400/20 bg-red-400/[0.06] text-red-200":isCN?"border-cyan-400/20 bg-cyan-400/[0.06] text-cyan-200":"border-amber-400/20 bg-amber-400/[0.06] text-amber-200";
@@ -551,6 +554,12 @@ export default function UploadPage() {
                     <div className="text-[10px] opacity-60">Classification Result</div>
                     <div className="text-sm font-semibold">{pred}</div>
                     <div className="text-[11px] opacity-70">Confidence: {conf!==undefined?`${(conf*100).toFixed(1)}%`:"—"}</div>
+                    {regQc?.ncc_warnings && regQc.ncc_warnings.length > 0 && regQc.ncc_warnings.map((w,i) => (
+                      <div key={i} className="text-[10px] text-amber-300/80">⚠ {w}</div>
+                    ))}
+                    {regQc?.ncc_pass === true && (
+                      <div className="text-[10px] text-emerald-300/60">✓ Registration quality good — NCC: {regQc.ncc_per_scan.map(n => n.toFixed(3)).join(', ')}</div>
+                    )}
                     {convRisk!==undefined&&<div className="text-[11px] opacity-70">Conversion risk: {(convRisk*100).toFixed(1)}%</div>}
                     <div className="flex items-center justify-between pt-1">
                       <span className="text-[10px] opacity-40">Stopped at: {final?.cascade_stopped_at as string}</span>
@@ -573,13 +582,13 @@ export default function UploadPage() {
                 <button onClick={clearCases} className="text-[10px] text-red-400/60 hover:text-red-400 transition">Clear history</button>
               </div>
               <div className="space-y-2">
-                {savedCases.slice(0,5).map((c)=>{
+                {savedCases.slice(0,5).map((c, idx)=>{
                   const pred=c.result.final.prediction;
                   const conf=c.result.final.confidence;
                   const isAD=pred.includes("Alzheimer");
                   const isCN=pred.includes("Normal");
                   return (
-                    <div key={c.id} className="flex items-center justify-between rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2">
+                    <div key={`${c.id}-${idx}`} className="flex items-center justify-between rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2">
                       <div>
                         <div className="text-xs font-medium text-white/70">{c.id}</div>
                         <div className={cn("text-[10px]",isAD?"text-red-300":isCN?"text-cyan-300":"text-amber-300")}>{pred} · {(conf*100).toFixed(1)}%</div>

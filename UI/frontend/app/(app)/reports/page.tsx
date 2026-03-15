@@ -114,15 +114,16 @@ export default function ReportsPage() {
   const caseId = searchParams.get("case") || "AUD-0231";
   const fallbackRegion = searchParams.get("region") || "Bilateral Hippocampus";
 
-  // Check store for a real pipeline result first, fall back to static demo data
+  // Check store for a real pipeline result first, fall back to static demo data.
+  // storeReady gates all store reads so SSR and the first client render agree.
+  const [storeReady, setStoreReady] = useState(false);
+  useEffect(() => { setStoreReady(true); }, []);
+
   const storeCase  = useAnalysisStore((s) => s.getCase(caseId));
   const latestCase = useAnalysisStore((s) => s.latestCase());
 
-  // Priority: URL case ID matches store → use it
-  // Otherwise: URL has no real case ID (empty or static) → show latest real run
-  // Otherwise: fall back to static demo
-  const liveCase: AnalysisCase | undefined =
-    storeCase ?? ((!caseId || !REPORT_DATA[caseId]) ? latestCase : undefined);
+  const liveCase: AnalysisCase | undefined = !storeReady ? undefined
+    : storeCase ?? ((!caseId || !REPORT_DATA[caseId]) ? latestCase : undefined);
 
   const reportCase = liveCase
     ? buildLiveReport(liveCase)
@@ -167,7 +168,7 @@ export default function ReportsPage() {
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Clinical Report — ${caseId}</title>
+  <title>Clinical Report — ${displayCaseId}</title>
   <style>
     @page { size: A4; margin: 16mm 18mm; }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -368,7 +369,7 @@ export default function ReportsPage() {
 
         <div className="flex flex-wrap gap-2">
           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs text-white/70">
-            Case: <span className="text-white/90">{caseId}</span> • Status:{" "}
+            Case: <span className="text-white/90">{displayCaseId}</span> • Status:{" "}
             <span className="text-white/90">{reportCase.status}</span>
           </div>
           <button
@@ -381,7 +382,7 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      <CaseSwitcher currentCaseId={caseId} />
+      <CaseSwitcher currentCaseId={displayCaseId} />
 
       {/* Top Summary Grid */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_0.85fr]">

@@ -152,11 +152,11 @@ const StatCard = memo(function StatCard({
           <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
             <div className="h-2 w-16 animate-pulse rounded-full bg-white/10" />
             <div className="mt-3 flex items-end gap-1">
-              {Array.from({ length: 7 }).map((_, i) => (
+              {[28, 20, 36, 24, 32, 18, 30].map((h, i) => (
                 <div
                   key={i}
                   className="w-1.5 animate-pulse rounded-full bg-white/10"
-                  style={{ height: `${16 + Math.random() * 24}px` }}
+                  style={{ height: `${h}px` }}
                 />
               ))}
             </div>
