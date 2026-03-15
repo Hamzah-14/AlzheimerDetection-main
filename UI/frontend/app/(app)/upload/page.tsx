@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   Scan, Cpu, Zap, Brain, FileText, Upload,
   CheckCircle2, ChevronRight, ChevronLeft,
-  Info, Plus, X, Calendar,
+  Info, X, Calendar,
 } from "lucide-react";
 import { usePageTitle } from "@/lib/use-page-title";
 import { runAnalysis } from "@/lib/uploadHandler";
@@ -84,6 +84,28 @@ const INFO = {
     ],
   },
 };
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function extractDateFromFilename(filename: string): Date | null {
+  // Match any YYYYMMDD sequence (e.g. 021_S_0753_20070315.nii → 2007-03-15)
+  for (const [, y, m, d] of filename.matchAll(/(\d{4})(\d{2})(\d{2})/g)) {
+    const year = parseInt(y), month = parseInt(m), day = parseInt(d);
+    if (year < 1990 || year > 2035 || month < 1 || month > 12 || day < 1 || day > 31) continue;
+    const date = new Date(year, month - 1, day);
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) continue;
+    return date;
+  }
+  return null;
+}
+
+function sortByDate(entries: ScanEntry[]): ScanEntry[] {
+  return [...entries].sort((a, b) => {
+    if (!a.date && !b.date) return 0;
+    if (!a.date) return 1;
+    if (!b.date) return -1;
+    return a.date.getTime() - b.date.getTime();
+  });
+}
 
 function DatePicker({ value, onChange }: { value: Date | null; onChange: (d: Date) => void }) {
   const [open,   setOpen]   = useState(false);
@@ -207,8 +229,8 @@ export default function UploadPage() {
   usePageTitle("Upload Case");
   const router = useRouter();
   const [step, setStep] = useState<WizardStep>(1);
-  const [scans, setScans] = useState<ScanEntry[]>([{ id:1, file:null, date:null }, { id:2, file:null, date:null }]);
-  const nextScanId = useRef(3);
+  const [scans, setScans] = useState<ScanEntry[]>([]);
+  const nextScanId = useRef(1);
   const [age,          setAge]         = useState("");
   const [sex,          setSex]         = useState<"M"|"F"|null>(null);
   const [education,    setEducation]   = useState("");
@@ -228,14 +250,22 @@ export default function UploadPage() {
   const updateJob = (id: string, patch: Partial<Job>) =>
     setJobs(prev => prev.map(j => j.id===id ? {...j,...patch} : j));
 
-  const step1Valid = scans.length>=2 && scans.slice(0,2).every(s=>s.file&&s.date);
+  const step1Valid = scans.length >= 1 && scans.every(s => s.file && s.date);
   const step2Valid = !!age&&Number(age)>0&&!!sex&&!!education&&Number(education)>0&&!!race;
   const step3Valid = true;
 
-  const updateFile = (id:number,file:File) => setScans(s=>s.map(sc=>sc.id===id?{...sc,file}:sc));
-  const updateDate = (id:number,date:Date) => setScans(s=>s.map(sc=>sc.id===id?{...sc,date}:sc));
-  const addScan    = () => { const id=nextScanId.current++; setScans(s=>[...s,{id,file:null,date:null}]); };
-  const removeScan = (id:number) => setScans(s=>s.filter(sc=>sc.id!==id));
+  const updateDate  = (id: number, date: Date) => setScans(s => sortByDate(s.map(sc => sc.id===id ? {...sc, date} : sc)));
+  const removeScan  = (id: number) => setScans(s => s.filter(sc => sc.id !== id));
+  const handleFiles = (files: FileList | null) => {
+    if (!files) return;
+    const existingNames = new Set(scans.map(s => s.file?.name));
+    const toAdd = Array.from(files)
+      .filter(f => (f.name.endsWith(".nii") || f.name.endsWith(".nii.gz")) && !existingNames.has(f.name))
+      .slice(0, Math.max(0, 15 - scans.length));
+    if (!toAdd.length) return;
+    const newEntries: ScanEntry[] = toAdd.map(file => ({ id: nextScanId.current++, file, date: extractDateFromFilename(file.name) }));
+    setScans(prev => sortByDate([...prev, ...newEntries]));
+  };
   const gapMonths  = (a:Date,b:Date) => (b.getTime()-a.getTime())/(1000*60*60*24*30.44);
 
   const addCase    = useAnalysisStore((s) => s.addCase);
@@ -323,47 +353,62 @@ export default function UploadPage() {
             <div className="glass pulse-trigger space-y-4 rounded-[28px] p-6">
               <div>
                 <div className="text-sm font-medium text-white">MRI Scans</div>
-                <div className="mt-0.5 text-xs text-white/40">Minimum 2 scans required for longitudinal analysis</div>
+                <div className="mt-0.5 text-xs text-white/40">Upload 1–15 .nii / .nii.gz files · scan dates extracted automatically from filenames</div>
               </div>
-              <div className="space-y-3">
-                {scans.map((scan,idx)=>{
-                  const isRequired=idx<2;
-                  const prevScan=idx>0?scans[idx-1]:null;
-                  const gap=prevScan?.date&&scan.date?gapMonths(prevScan.date,scan.date):null;
-                  return (
-                    <div key={scan.id} className="rounded-2xl border border-white/8 bg-white/[0.02] p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-white/60">Scan {idx+1}{isRequired&&<span className="ml-1 text-purple-400/70">*</span>}</span>
-                        {!isRequired&&(<button type="button" onClick={()=>removeScan(scan.id)} className="flex h-5 w-5 items-center justify-center rounded-lg border border-white/10 text-white/30 hover:border-red-400/30 hover:text-red-400 transition"><X className="h-3 w-3"/></button>)}
-                      </div>
-                      <div className={cn("relative cursor-pointer rounded-xl border-2 border-dashed p-3.5 text-center transition",scan.file?"border-emerald-400/30 bg-emerald-400/[0.04]":"border-white/10 hover:border-white/20 hover:bg-white/[0.03]")}>
-                        <input type="file" className="absolute inset-0 h-full w-full cursor-pointer opacity-0" onChange={e=>{const f=e.target.files?.[0];if(f)updateFile(scan.id,f);}}/>
-                        {scan.file?(
-                          <div className="flex items-center justify-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-400"/><span className="text-xs text-white/70">{scan.file.name}</span><span className="text-xs text-white/30">({(scan.file.size/1024/1024).toFixed(1)} MB)</span></div>
-                        ):(
-                          <div className="flex items-center justify-center gap-2"><Upload className="h-3.5 w-3.5 text-white/30"/><span className="text-xs text-white/30">Drop or click — .nii · .nii.gz</span></div>
+
+              {/* Multi-file drop zone */}
+              <div
+                className={cn("relative cursor-pointer rounded-2xl border-2 border-dashed p-5 text-center transition",
+                  scans.length>0?"border-emerald-400/30 bg-emerald-400/[0.03] hover:border-emerald-400/40":"border-white/10 hover:border-white/20 hover:bg-white/[0.03]")}
+                onDrop={e=>{e.preventDefault();handleFiles(e.dataTransfer.files);}}
+                onDragOver={e=>e.preventDefault()}
+              >
+                <input type="file" multiple accept=".nii,.nii.gz" className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  onChange={e=>handleFiles(e.target.files)}/>
+                <div className="pointer-events-none flex flex-col items-center gap-1.5">
+                  <Upload className="h-5 w-5 text-white/30"/>
+                  <span className="text-xs text-white/40">
+                    {scans.length===0?"Drop files here or click to browse — select multiple at once":`${scans.length} file${scans.length>1?"s":""} loaded · drop or click to add more`}
+                  </span>
+                  <span className="text-[10px] text-white/25">.nii · .nii.gz · up to 15 files</span>
+                </div>
+              </div>
+
+              {/* File list */}
+              {scans.length>0&&(
+                <div className="space-y-2">
+                  {scans.map((scan,idx)=>{
+                    const prevScan=idx>0?scans[idx-1]:null;
+                    const gap=prevScan?.date&&scan.date?gapMonths(prevScan.date,scan.date):null;
+                    const autoDate=scan.file?extractDateFromFilename(scan.file.name):null;
+                    return (
+                      <div key={scan.id} className="rounded-2xl border border-white/8 bg-white/[0.02] p-3 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-[9px] font-mono text-white/40">{idx+1}</span>
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-xs text-white/70">{scan.file?.name??"—"}</div>
+                            {scan.file&&<div className="text-[10px] text-white/30">{(scan.file.size/1024/1024).toFixed(1)} MB</div>}
+                          </div>
+                          <button type="button" onClick={()=>removeScan(scan.id)} className="flex h-5 w-5 items-center justify-center rounded-lg border border-white/10 text-white/30 hover:border-red-400/30 hover:text-red-400 transition"><X className="h-3 w-3"/></button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="shrink-0 text-[10px] text-white/40">Date</span>
+                          <div className="flex-1"><DatePicker value={scan.date} onChange={d=>updateDate(scan.id,d)}/></div>
+                          {scan.date&&<span className={cn("shrink-0 text-[10px]",autoDate?"text-emerald-400/50":"text-white/25")}>{autoDate?"auto":"manual"}</span>}
+                        </div>
+                        {!scan.date&&<div className="text-[10px] text-amber-300/70">⚠ Date not found in filename — enter manually</div>}
+                        {gap!==null&&(
+                          <div className={cn("flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[10px]",gap<3?"border border-amber-400/20 bg-amber-400/[0.06] text-amber-300":"border border-emerald-400/20 bg-emerald-400/[0.06] text-emerald-300")}>
+                            {gap<3?"⚠":"✓"}<span>{gap.toFixed(1)} months since scan {idx}{gap<3&&" — close together, slope estimate may be unreliable"}</span>
+                          </div>
                         )}
                       </div>
-                      <div>
-                        <label className="mb-1.5 block text-[10px] text-white/40">Scan date</label>
-                        <DatePicker value={scan.date} onChange={d=>updateDate(scan.id,d)}/>
-                      </div>
-                      {isRequired&&(!scan.file||!scan.date)&&(
-                        <div className="flex gap-3">
-                          {!scan.file&&<span className="text-[10px] text-amber-300/70">⚠ No file selected</span>}
-                          {!scan.date&&<span className="text-[10px] text-amber-300/70">⚠ No scan date set</span>}
-                        </div>
-                      )}
-                      {gap!==null&&(
-                        <div className={cn("flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[10px]",gap<3?"border border-amber-400/20 bg-amber-400/[0.06] text-amber-300":"border border-emerald-400/20 bg-emerald-400/[0.06] text-emerald-300")}>
-                          {gap<3?"⚠":"✓"}<span>{gap.toFixed(1)} months since scan {idx}{gap<3&&" — scans are close together, slope estimate may be unreliable"}</span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              <button type="button" onClick={addScan} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/10 py-2.5 text-xs text-white/40 hover:border-white/20 hover:text-white/60 transition"><Plus className="h-3.5 w-3.5"/> Add another scan</button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Follow-up summary */}
               {(()=>{
                 const withDates=scans.filter(s=>s.date);
                 if(withDates.length<2)return null;
@@ -380,11 +425,15 @@ export default function UploadPage() {
                   </div>
                 );
               })()}
+
+              {scans.length>=15&&<div className="rounded-xl border border-amber-400/20 bg-amber-400/[0.06] px-3 py-2 text-[10px] text-amber-300">Maximum 15 scans reached</div>}
               <button type="button" onClick={()=>step1Valid&&setStep(2)} disabled={!step1Valid}
                 className={cn("flex w-full items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-medium transition",step1Valid?"border-white/10 bg-white/10 text-white hover:bg-white/15":"cursor-not-allowed border-white/5 bg-white/[0.03] text-white/25")}>
                 Next: Demographics <ChevronRight className="h-4 w-4"/>
               </button>
-              {!step1Valid&&<p className="text-center text-[11px] text-white/30">Each of the first 2 scans needs a file + a date to continue</p>}
+              {!step1Valid&&<p className="text-center text-[11px] text-white/30">
+                {scans.length===0?"Upload at least 1 scan to continue":"All scans need a date to continue"}
+              </p>}
             </div>
           )}
 
