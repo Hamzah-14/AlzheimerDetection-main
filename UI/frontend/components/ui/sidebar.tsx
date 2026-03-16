@@ -49,7 +49,7 @@ const GROUPS: NavGroup[] = [
   },
 ];
 
-/* ── Shared nav-link renderer ───────────────────────────────── */
+/* -- Shared nav-link renderer --------------------------------- */
 function NavLink({
   item,
   active,
@@ -69,7 +69,7 @@ function NavLink({
         active ? "text-white" : "text-white/70 hover:bg-white/5 hover:text-white"
       )}
     >
-      {/* Animated sliding pill — shared layoutId across all items */}
+      {/* Animated sliding pill --- shared layoutId across all items */}
       {active && (
         <motion.div
           layoutId="sidebar-pill"
@@ -97,7 +97,7 @@ function NavLink({
   );
 }
 
-/* ── Main sidebar ────────────────────────────────────────────── */
+/* -- Main sidebar ---------------------------------------------- */
 // Pages that should deep-link to the latest real case when one exists
 const CASE_PAGES = new Set(["/viewer", "/explain", "/timeline", "/reports"]);
 
@@ -137,7 +137,7 @@ export function Sidebar() {
     >
       <div className="flex min-h-screen flex-1 flex-col">
 
-        {/* ── Header ────────────────────────────────────────── */}
+        {/* -- Header ------------------------------------------ */}
         <div
           data-tour="sidebar-header"
           className={cn("px-3 py-4", collapsed && "space-y-3")}
@@ -178,9 +178,9 @@ export function Sidebar() {
           </div>
         </div>
 
-        {/* ── Nav ───────────────────────────────────────────── */}
+        {/* -- Nav --------------------------------------------- */}
         <nav className="flex-1 px-2 py-2">
-          {/* Dashboard — always visible, no group header */}
+          {/* Dashboard --- always visible, no group header */}
           <div className="mb-2">
             <NavLink
               item={{ label: "Dashboard", href: "/dashboard", icon: LayoutDashboard }}
@@ -195,7 +195,7 @@ export function Sidebar() {
 
             return (
               <div key={group.id} className="mb-1">
-                {/* Section header — hidden when collapsed */}
+                {/* Section header --- hidden when collapsed */}
                 {!collapsed && (
                   <button
                     onClick={() => toggleGroup(group.id)}
@@ -211,7 +211,7 @@ export function Sidebar() {
                   </button>
                 )}
 
-                {/* Items — animated height collapse */}
+                {/* Items --- animated height collapse */}
                 <AnimatePresence initial={false}>
                   {(collapsed || isOpen) && (
                     <motion.div
@@ -240,7 +240,7 @@ export function Sidebar() {
           })}
         </nav>
 
-        {/* ── Footer ────────────────────────────────────────── */}
+        {/* -- Footer ------------------------------------------ */}
         <div className="mt-auto border-t border-white/10 p-3">
           <NavLink
             item={{ label: "About", href: "/about", icon: Info }}

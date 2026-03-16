@@ -11,7 +11,7 @@ import {
 
 const BACKEND_URL = "http://localhost:8000";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// -- Types ---------------------------------------------------------------------
 
 export interface ScanEntry {
   file: File;
@@ -35,7 +35,7 @@ export interface AnalysisCallbacks {
   onError:  (message: string) => void;
 }
 
-// ── Main function ─────────────────────────────────────────────────────────────
+// -- Main function -------------------------------------------------------------
 
 export async function runAnalysis(
   scans: ScanEntry[],
@@ -44,7 +44,7 @@ export async function runAnalysis(
 ): Promise<void> {
   const { onStage, onResult, onError } = callbacks;
 
-  // ── 1. Build multipart form ────────────────────────────────────────────────
+  // -- 1. Build multipart form ------------------------------------------------
   const form = new FormData();
 
   // Sort by date before sending
@@ -65,7 +65,7 @@ export async function runAnalysis(
   if (patient.tau)     form.append("tau",     String(patient.tau));
   if (patient.ptau)    form.append("ptau",    String(patient.ptau));
 
-  // ── 2. Submit job ──────────────────────────────────────────────────────────
+  // -- 2. Submit job ----------------------------------------------------------
   let job_id: string;
   try {
     const res = await fetch(`${BACKEND_URL}/analyze`, {
@@ -85,7 +85,7 @@ export async function runAnalysis(
     return;
   }
 
-  // ── 3. Stream progress via SSE ─────────────────────────────────────────────
+  // -- 3. Stream progress via SSE ---------------------------------------------
   return new Promise((resolve) => {
     const evtSource = new EventSource(`${BACKEND_URL}/analyze/${job_id}/stream`);
 
@@ -135,7 +135,7 @@ export async function runAnalysis(
         const payload = JSON.parse(e.data) as { message: string };
         onError(payload.message ?? "Pipeline failed");
       } catch {
-        onError("Pipeline failed — check server logs");
+        onError("Pipeline failed --- check server logs");
       }
       evtSource.close();
       resolve();

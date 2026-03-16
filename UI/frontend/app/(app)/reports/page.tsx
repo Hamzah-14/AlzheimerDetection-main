@@ -39,7 +39,7 @@ function classTheme(datasetClass: DatasetClass) {
   };
 }
 
-// ── Convert a real pipeline result into a report-compatible object ─────────────
+// -- Convert a real pipeline result into a report-compatible object -------------
 function buildLiveReport(c: AnalysisCase) {
   const final    = c.result.final;
   const pred     = final.prediction;
@@ -56,7 +56,7 @@ function buildLiveReport(c: AnalysisCase) {
   // Derive a decision label
   const decision =
     datasetClass === "AD"  ? "Alzheimer's Disease likely" :
-    datasetClass === "MCI" ? (task2?.label === "converting_MCI" ? "Converting MCI — High Risk" : "Stable MCI") :
+    datasetClass === "MCI" ? (task2?.label === "converting_MCI" ? "Converting MCI --- High Risk" : "Stable MCI") :
     "Cognitively Normal";
 
   // Build feature bars from raw probabilities
@@ -77,7 +77,7 @@ function buildLiveReport(c: AnalysisCase) {
     datasetClass === "AD"
       ? `Radiomic analysis of bilateral hippocampal volumes indicates a high probability (${(adProb*100).toFixed(1)}%) of Alzheimer's Disease-consistent texture patterns. The cascade classifier stopped at Task 1 (AD vs CN), indicating clear differentiation from normal cognition.`
       : datasetClass === "MCI"
-      ? `The scan shows texture patterns consistent with Mild Cognitive Impairment (MCI probability ${(mciProb*100).toFixed(1)}%). The cascade proceeded to Task 2 (Stable vs Converting MCI). ${convProb > 0.5 ? "Conversion risk is elevated — closer monitoring is advised." : "Current trajectory appears stable."}`
+      ? `The scan shows texture patterns consistent with Mild Cognitive Impairment (MCI probability ${(mciProb*100).toFixed(1)}%). The cascade proceeded to Task 2 (Stable vs Converting MCI). ${convProb > 0.5 ? "Conversion risk is elevated --- closer monitoring is advised." : "Current trajectory appears stable."}`
       : `Bilateral hippocampal radiomic features are within normal range. AD probability is low (${(adProb*100).toFixed(1)}%) and MCI probability is below threshold (${(mciProb*100).toFixed(1)}%). No immediate clinical concern indicated.`;
 
   const recommendation =
@@ -101,9 +101,9 @@ function buildLiveReport(c: AnalysisCase) {
     recommendation,
     features,
     explainability: `The stacking ensemble cascade evaluated this case across ${final.cascade_stopped_at === "task1" ? "1 stage" : final.cascade_stopped_at === "task3" ? "2 stages" : "3 stages"}. Feature alignment used ${c.scans.length} longitudinal scan${c.scans.length > 1 ? "s" : ""} with a follow-up period derived from scan dates. Prediction stopped at ${final.cascade_stopped_at}.`,
-    notes: `Patient: ${c.patient.age}yo ${c.patient.sex === "M" ? "Male" : "Female"} · Education: ${c.patient.education}yr · Race: ${c.patient.race}${c.patient.apoe ? ` · APOE: ${c.patient.apoe}` : ""} · Scans: ${c.scans.map(s => s.date).join(", ")}`,
+    notes: `Patient: ${c.patient.age}yo ${c.patient.sex === "M" ? "Male" : "Female"} -- Education: ${c.patient.education}yr -- Race: ${c.patient.race}${c.patient.apoe ? ` -- APOE: ${c.patient.apoe}` : ""} -- Scans: ${c.scans.map(s => s.date).join(", ")}`,
     volumeShape: "(2, 64, 64, 64)",
-    preprocessing: "N4 bias field correction → MNI152 registration (Rigid + Affine) → Atlas-based hippocampal crop → Per-channel p1/p99 quantization (Ng=32)",
+    preprocessing: "N4 bias field correction --- MNI152 registration (Rigid + Affine) --- Atlas-based hippocampal crop --- Per-channel p1/p99 quantization (Ng=32)",
   };
 }
 
@@ -169,7 +169,7 @@ export default function ReportsPage() {
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Clinical Report — ${displayCaseId}</title>
+  <title>Clinical Report --- ${displayCaseId}</title>
   <style>
     @page { size: A4; margin: 16mm 18mm; }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -178,7 +178,7 @@ export default function ReportsPage() {
       font-size: 9.5pt; color: #111827; background: #fff; line-height: 1.55;
     }
 
-    /* ── Header ─────────────────────────────────────────── */
+    /* -- Header ------------------------------------------- */
     .doc-header {
       display: flex; align-items: flex-start; justify-content: space-between;
       border-bottom: 2px solid #111827; padding-bottom: 10px; margin-bottom: 18px;
@@ -189,7 +189,7 @@ export default function ReportsPage() {
     .doc-meta { text-align: right; font-size: 8pt; color: #6b7280; line-height: 1.7; }
     .doc-meta strong { color: #111827; }
 
-    /* ── Classification banner ───────────────────────────── */
+    /* -- Classification banner ----------------------------- */
     .classification {
       display: flex; align-items: center; gap: 12px;
       background: #f9fafb; border: 1px solid #e5e7eb;
@@ -206,7 +206,7 @@ export default function ReportsPage() {
     .conf-bar-track { margin-top: 4px; height: 6px; background: #e5e7eb; border-radius: 99px; width: 180px; }
     .conf-bar-fill  { height: 100%; background: ${classColor}; border-radius: 99px; width: ${confPct}%; }
 
-    /* ── Sections ────────────────────────────────────────── */
+    /* -- Sections ------------------------------------------ */
     .section { margin-bottom: 16px; page-break-inside: avoid; }
     .section-title {
       font-size: 7pt; font-weight: 700; text-transform: uppercase;
@@ -215,13 +215,13 @@ export default function ReportsPage() {
     }
     .prose { font-size: 9pt; color: #374151; line-height: 1.65; }
 
-    /* ── Info grid ───────────────────────────────────────── */
+    /* -- Info grid ----------------------------------------- */
     .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .info-cell { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 10px; }
     .info-label { font-size: 7pt; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.6px; }
     .info-value { font-size: 9pt; font-weight: 600; color: #111827; margin-top: 2px; }
 
-    /* ── Features table ──────────────────────────────────── */
+    /* -- Features table ------------------------------------ */
     table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
     th {
       text-align: left; font-size: 7pt; font-weight: 700; text-transform: uppercase;
@@ -236,10 +236,10 @@ export default function ReportsPage() {
     .bar-track { height: 5px; background: #e5e7eb; border-radius: 99px; }
     .bar-fill  { height: 100%; background: #7c3aed; border-radius: 99px; }
 
-    /* ── Two-col layout ──────────────────────────────────── */
+    /* -- Two-col layout ------------------------------------ */
     .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
-    /* ── Footer ──────────────────────────────────────────── */
+    /* -- Footer -------------------------------------------- */
     .doc-footer {
       margin-top: 20px; padding-top: 8px; border-top: 1px solid #e5e7eb;
       display: flex; justify-content: space-between; align-items: center;
@@ -272,7 +272,7 @@ export default function ReportsPage() {
     <div class="class-badge">${reportCase.datasetClass}</div>
     <div>
       <div class="class-decision">${reportCase.decision}</div>
-      <div class="class-conf">Confidence: ${confPct}% &nbsp;·&nbsp; Latency: ${reportCase.latency} on PYNQ-Z2 &nbsp;·&nbsp; Status: ${reportCase.status}</div>
+      <div class="class-conf">Confidence: ${confPct}% &nbsp;--&nbsp; Latency: ${reportCase.latency} on PYNQ-Z2 &nbsp;--&nbsp; Status: ${reportCase.status}</div>
       <div class="conf-bar-track"><div class="conf-bar-fill"></div></div>
     </div>
   </div>
@@ -329,8 +329,8 @@ export default function ReportsPage() {
 
   <!-- Footer -->
   <div class="doc-footer">
-    <span>Synapse.PL &nbsp;·&nbsp; Precision Neurodiagnostics &nbsp;·&nbsp; For clinical review only</span>
-    <span class="footer-badge">PYNQ-Z2 · 3D GLCM · Radiomics Classifier</span>
+    <span>Synapse.PL &nbsp;--&nbsp; Precision Neurodiagnostics &nbsp;--&nbsp; For clinical review only</span>
+    <span class="footer-badge">PYNQ-Z2 -- 3D GLCM -- Radiomics Classifier</span>
   </div>
 
   <script>window.onload = () => { window.print(); }</script>
@@ -370,7 +370,7 @@ export default function ReportsPage() {
 
         <div className="flex flex-wrap gap-2">
           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs text-white/70">
-            Case: <span className="text-white/90">{displayCaseId}</span> • Status:{" "}
+            Case: <span className="text-white/90">{displayCaseId}</span> --- Status:{" "}
             <span className="text-white/90">{reportCase.status}</span>
           </div>
           <button
@@ -397,7 +397,7 @@ export default function ReportsPage() {
             <div className="mt-4">
               <div className="mb-2 flex items-center gap-1.5">
                 <span className="rounded-md border border-purple-400/25 bg-purple-400/10 px-1.5 py-0.5 text-[10px] font-medium text-purple-300">AI Generated</span>
-                <span className="text-[10px] text-white/30">GPT-4o-mini · for clinical reference only</span>
+                <span className="text-[10px] text-white/30">GPT-4o-mini -- for clinical reference only</span>
               </div>
               <p className="text-sm leading-7 text-white/80">{reportCase.ai_narrative}</p>
             </div>
@@ -441,7 +441,7 @@ export default function ReportsPage() {
             <span>
               Region: <span className="text-white/80">{reportCase.region}</span>
             </span>
-            <span>•</span>
+            <span>---</span>
             <span>
               Latency: <span className="text-white/80">{reportCase.latency}</span>
             </span>
@@ -573,7 +573,7 @@ export default function ReportsPage() {
                   Pipeline:{" "}
                   <span className="text-white/80">3D GLCM Radiomics</span>
                 </span>
-                <span>•</span>
+                <span>---</span>
                 <span>
                   Output: <span className="text-white/80">{reportCase.decision}</span>
                 </span>

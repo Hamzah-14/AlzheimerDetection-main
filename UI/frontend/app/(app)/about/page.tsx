@@ -22,7 +22,7 @@ const fadeUp = (delay = 0) => ({
   transition:{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay },
 });
 
-// ── Team ──────────────────────────────────────────────────────────────────────
+// ------ Team ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 const TEAM = [
   {
     name:   "Vikram",
@@ -62,7 +62,7 @@ const TEAM = [
   },
 ];
 
-// ── Tech stack ────────────────────────────────────────────────────────────────
+// ------ Tech stack ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 const STACK = [
   { label: "FPGA Hardware",    value: "PYNQ-Z2 Zynq-7020",          icon: Cpu      },
   { label: "Feature Pipeline", value: "3D GLCM Radiomics",           icon: Database },
@@ -80,7 +80,7 @@ export default function AboutPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-10 pb-12">
 
-      {/* ── Hero ────────────────────────────────────────────────────────────── */}
+      {/* ------ Hero ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
       <motion.div {...fadeUp(0)} className="space-y-3 pt-2">
         <div className="flex items-center gap-2">
           <span className="rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-0.5 text-xs font-semibold uppercase tracking-widest text-purple-400">
@@ -93,12 +93,12 @@ export default function AboutPage() {
         <p className="max-w-2xl text-base leading-relaxed text-white/55">
           Synapse.PL is an FPGA-accelerated Alzheimer's detection platform built as a
           final-year engineering senior design project. Upload a raw MRI scan and receive
-          a per-region risk score, Grad-CAM heatmap, and physician-ready PDF — processed
+          a per-region risk score, Grad-CAM heatmap, and physician-ready PDF --- processed
           at the edge in under 500 ms.
         </p>
       </motion.div>
 
-      {/* ── Mission ─────────────────────────────────────────────────────────── */}
+      {/* ------ Mission --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */}
       <motion.div {...fadeUp(0.08)}>
         <Card className="border-white/8 bg-white/[0.03]">
           <CardContent className="p-6">
@@ -117,7 +117,7 @@ export default function AboutPage() {
                 {
                   icon: Shield,
                   title: "Clinician-ready",
-                  desc: "Results are formatted as structured clinical reports — exportable as PDFs suitable for direct physician review.",
+                  desc: "Results are formatted as structured clinical reports --- exportable as PDFs suitable for direct physician review.",
                 },
               ].map(({ icon: Icon, title, desc }) => (
                 <div key={title} className="flex gap-4">
@@ -135,7 +135,7 @@ export default function AboutPage() {
         </Card>
       </motion.div>
 
-      {/* ── Team ────────────────────────────────────────────────────────────── */}
+      {/* ------ Team ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
       <motion.div {...fadeUp(0.12)} className="space-y-4">
         <div>
           <h2 className="text-xl font-semibold text-white">The Team</h2>
@@ -161,7 +161,7 @@ export default function AboutPage() {
         </div>
       </motion.div>
 
-      {/* ── Tech stack ──────────────────────────────────────────────────────── */}
+      {/* ------ Tech stack ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
       <motion.div {...fadeUp(0.16)} className="space-y-4">
         <div>
           <h2 className="text-xl font-semibold text-white">Tech Stack</h2>
@@ -183,7 +183,7 @@ export default function AboutPage() {
         </div>
       </motion.div>
 
-      {/* ── Footer note ─────────────────────────────────────────────────────── */}
+      {/* ------ Footer note --------------------------------------------------------------------------------------------------------------------------------------------------------------------- */}
       <motion.div {...fadeUp(0.2)}>
         <div className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.02] px-5 py-4">
           <Github className="h-4 w-4 shrink-0 text-white/30" />

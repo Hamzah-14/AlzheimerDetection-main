@@ -16,7 +16,7 @@ export function CaseSwitcher({ currentCaseId }: { currentCaseId: string }) {
   const router   = useRouter();
   const pathname = usePathname();
 
-  // Guard against SSR/hydration mismatch — store uses localStorage
+  // Guard against SSR/hydration mismatch --- store uses localStorage
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
 
@@ -52,14 +52,14 @@ export function CaseSwitcher({ currentCaseId }: { currentCaseId: string }) {
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      {/* Real cases — newest first */}
+      {/* Real cases --- newest first */}
       {ready && realCases.map((c) => (
         <CasePill key={c.id} id={c.id} risk={c.risk} region={c.region} />
       ))}
 
       {/* Divider */}
       {ready && realCases.length > 0 && (
-        <span className="select-none px-0.5 text-white/15">·</span>
+        <span className="select-none px-0.5 text-white/15">--</span>
       )}
 
       {/* Demo cases */}

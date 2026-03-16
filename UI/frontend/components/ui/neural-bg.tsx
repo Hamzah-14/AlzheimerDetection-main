@@ -33,7 +33,7 @@ export function NeuralBG() {
           <circle cx="1080" cy="620" r="2.5" />
         </g>
 
-        {/* subtle moving “scan” highlight along the lines */}
+        {/* subtle moving ---scan--- highlight along the lines */}
         <g className="neural-scan">
           <path d="M60 120 C 280 40, 420 220, 640 140 S 980 60, 1140 200" />
           <path d="M120 360 C 300 240, 520 300, 700 360 S 980 460, 1160 360" />

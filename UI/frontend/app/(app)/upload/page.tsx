@@ -13,7 +13,7 @@ import { usePageTitle } from "@/lib/use-page-title";
 import { runAnalysis } from "@/lib/uploadHandler";
 import { useAnalysisStore } from "@/lib/analysis-store";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types --------------------------------------------------------------------
 type PipelineStage = { label: string; sub: string; icon: React.ElementType; fpga?: boolean };
 type ScanEntry     = { id: number; file: File | null; date: Date | null };
 type CalView       = "day" | "month" | "year";
@@ -33,9 +33,9 @@ interface Job {
 
 const STAGES: PipelineStage[] = [
   { label: "Upload",       sub: "MRI volume received and validated",       icon: Scan                 },
-  { label: "Preprocess",   sub: "N4 correction · MNI registration · crop", icon: Cpu                  },
+  { label: "Preprocess",   sub: "N4 correction -- MNI registration -- crop", icon: Cpu                  },
   { label: "Radiomics",    sub: "3D GLCM feature extraction on PYNQ-Z2",   icon: Zap,   fpga: true    },
-  { label: "Classify",     sub: "Stacking ensemble · cascade inference",    icon: Brain                },
+  { label: "Classify",     sub: "Stacking ensemble -- cascade inference",    icon: Brain                },
   { label: "Report Ready", sub: "Clinical summary generated",               icon: FileText             },
 ];
 
@@ -50,19 +50,19 @@ const INFO = {
     title: "APOE Genotype",
     body: "APOE (Apolipoprotein E) is a gene that influences Alzheimer\'s risk. You inherit one copy from each parent.",
     examples: [
-      { label: "e3/e3", note: "Most common — average population risk" },
-      { label: "e3/e4", note: "One high-risk copy — roughly doubles risk" },
-      { label: "e4/e4", note: "Two high-risk copies — up to 12× increased risk" },
-      { label: "e2/e3", note: "e2 is protective — slightly below average risk" },
+      { label: "e3/e3", note: "Most common --- average population risk" },
+      { label: "e3/e4", note: "One high-risk copy --- roughly doubles risk" },
+      { label: "e4/e4", note: "Two high-risk copies --- up to 12-- increased risk" },
+      { label: "e2/e3", note: "e2 is protective --- slightly below average risk" },
     ],
   },
   abeta42: {
     title: "Amyloid-beta 42 (Abeta42)",
     body: "In Alzheimer\'s, Abeta42 gets trapped in brain plaques, so CSF levels drop as disease progresses.",
     examples: [
-      { label: "> 1000 pg/mL", note: "Normal — no amyloid concern" },
-      { label: "700–1000 pg/mL", note: "Borderline — warrants monitoring" },
-      { label: "< 700 pg/mL", note: "Concerning — strongly suggests amyloid pathology" },
+      { label: "> 1000 pg/mL", note: "Normal --- no amyloid concern" },
+      { label: "700---1000 pg/mL", note: "Borderline --- warrants monitoring" },
+      { label: "< 700 pg/mL", note: "Concerning --- strongly suggests amyloid pathology" },
     ],
   },
   tau: {
@@ -70,8 +70,8 @@ const INFO = {
     body: "Tau stabilises neurons. When brain cells are damaged, tau leaks into the CSF.",
     examples: [
       { label: "< 300 pg/mL", note: "Normal" },
-      { label: "300–400 pg/mL", note: "Mildly elevated" },
-      { label: "> 400 pg/mL", note: "Significantly elevated — active neuronal loss" },
+      { label: "300---400 pg/mL", note: "Mildly elevated" },
+      { label: "> 400 pg/mL", note: "Significantly elevated --- active neuronal loss" },
     ],
   },
   ptau: {
@@ -79,15 +79,15 @@ const INFO = {
     body: "More specific for Alzheimer\'s than total tau. Reflects neurofibrillary tangle formation.",
     examples: [
       { label: "< 27 pg/mL", note: "Normal range" },
-      { label: "27–40 pg/mL", note: "Borderline" },
+      { label: "27---40 pg/mL", note: "Borderline" },
       { label: "> 40 pg/mL", note: "Highly specific for Alzheimer\'s pathology" },
     ],
   },
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// --- Helpers ------------------------------------------------------------------
 function extractDateFromFilename(filename: string): Date | null {
-  // Match any YYYYMMDD sequence (e.g. 021_S_0753_20070315.nii → 2007-03-15)
+  // Match any YYYYMMDD sequence (e.g. 021_S_0753_20070315.nii --- 2007-03-15)
   for (const [, y, m, d] of filename.matchAll(/(\d{4})(\d{2})(\d{2})/g)) {
     const year = parseInt(y), month = parseInt(m), day = parseInt(d);
     if (year < 1990 || year > 2035 || month < 1 || month > 12 || day < 1 || day > 31) continue;
@@ -130,7 +130,7 @@ function DatePicker({ value, onChange }: { value: Date | null; onChange: (d: Dat
   const headerLabel = () => {
     if (view==="day")   return `${MONTHS_L[cursor.getMonth()]} ${cursor.getFullYear()}`;
     if (view==="month") return String(cursor.getFullYear());
-    return `${decadeStart} – ${decadeStart+9}`;
+    return `${decadeStart} --- ${decadeStart+9}`;
   };
   const cycleView = () => setView(v => v==="day"?"month":v==="month"?"year":"day");
   return (
@@ -214,7 +214,7 @@ function StepIndicator({ step, step1Valid, step2Valid, setStep }: {
         {steps.map(({n,label},idx)=>(
           <div key={n} className="flex items-center gap-1.5">
             <button type="button" onClick={()=>canNav(n)&&setStep(n)} className={cn("flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs transition",step===n?"border border-purple-400/30 bg-purple-500/15 text-purple-200":n<step?"text-emerald-400/70 hover:text-emerald-300":"cursor-not-allowed text-white/25")}>
-              <span className={cn("flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold",step===n?"bg-purple-500 text-white":n<step?"bg-emerald-500 text-white":"bg-white/10 text-white/30")}>{n<step?"✓":n}</span>
+              <span className={cn("flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold",step===n?"bg-purple-500 text-white":n<step?"bg-emerald-500 text-white":"bg-white/10 text-white/30")}>{n<step?"---":n}</span>
               {label}
             </button>
             {idx<2&&<ChevronRight className="h-3 w-3 shrink-0 text-white/15"/>}
@@ -274,7 +274,7 @@ export default function UploadPage() {
 
   const runPipeline = async () => {
     const jobId    = `job-${Date.now()}`;
-    const jobLabel = `Run ${jobCounter.current++} — ${age}yo ${sex==="M"?"Male":"Female"}`;
+    const jobLabel = `Run ${jobCounter.current++} --- ${age}yo ${sex==="M"?"Male":"Female"}`;
     const newJob: Job = { id:jobId, label:jobLabel, state:"running", activeStage:0, completedStages:[], result:null, error:null, caseId:null };
     setJobs(prev=>[newJob,...prev]);
     setPipelineState("running");
@@ -353,7 +353,7 @@ export default function UploadPage() {
             <div className="glass pulse-trigger space-y-4 rounded-[28px] p-6">
               <div>
                 <div className="text-sm font-medium text-white">MRI Scans</div>
-                <div className="mt-0.5 text-xs text-white/40">Upload 1–15 .nii / .nii.gz files · scan dates extracted automatically from filenames</div>
+                <div className="mt-0.5 text-xs text-white/40">Upload 1---15 .nii / .nii.gz files -- scan dates extracted automatically from filenames</div>
               </div>
 
               {/* Multi-file drop zone */}
@@ -368,9 +368,9 @@ export default function UploadPage() {
                 <div className="pointer-events-none flex flex-col items-center gap-1.5">
                   <Upload className="h-5 w-5 text-white/30"/>
                   <span className="text-xs text-white/40">
-                    {scans.length===0?"Drop files here or click to browse — select multiple at once":`${scans.length} file${scans.length>1?"s":""} loaded · drop or click to add more`}
+                    {scans.length===0?"Drop files here or click to browse --- select multiple at once":`${scans.length} file${scans.length>1?"s":""} loaded -- drop or click to add more`}
                   </span>
-                  <span className="text-[10px] text-white/25">.nii · .nii.gz · up to 15 files</span>
+                  <span className="text-[10px] text-white/25">.nii -- .nii.gz -- up to 15 files</span>
                 </div>
               </div>
 
@@ -386,7 +386,7 @@ export default function UploadPage() {
                         <div className="flex items-center gap-2">
                           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-[9px] font-mono text-white/40">{idx+1}</span>
                           <div className="min-w-0 flex-1">
-                            <div className="truncate text-xs text-white/70">{scan.file?.name??"—"}</div>
+                            <div className="truncate text-xs text-white/70">{scan.file?.name??"---"}</div>
                             {scan.file&&<div className="text-[10px] text-white/30">{(scan.file.size/1024/1024).toFixed(1)} MB</div>}
                           </div>
                           <button type="button" onClick={()=>removeScan(scan.id)} className="flex h-5 w-5 items-center justify-center rounded-lg border border-white/10 text-white/30 hover:border-red-400/30 hover:text-red-400 transition"><X className="h-3 w-3"/></button>
@@ -396,10 +396,10 @@ export default function UploadPage() {
                           <div className="flex-1"><DatePicker value={scan.date} onChange={d=>updateDate(scan.id,d)}/></div>
                           {scan.date&&<span className={cn("shrink-0 text-[10px]",autoDate?"text-emerald-400/50":"text-white/25")}>{autoDate?"auto":"manual"}</span>}
                         </div>
-                        {!scan.date&&<div className="text-[10px] text-amber-300/70">⚠ Date not found in filename — enter manually</div>}
+                        {!scan.date&&<div className="text-[10px] text-amber-300/70">--- Date not found in filename --- enter manually</div>}
                         {gap!==null&&(
                           <div className={cn("flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[10px]",gap<3?"border border-amber-400/20 bg-amber-400/[0.06] text-amber-300":"border border-emerald-400/20 bg-emerald-400/[0.06] text-emerald-300")}>
-                            {gap<3?"⚠":"✓"}<span>{gap.toFixed(1)} months since scan {idx}{gap<3&&" — close together, slope estimate may be unreliable"}</span>
+                            {gap<3?"---":"---"}<span>{gap.toFixed(1)} months since scan {idx}{gap<3&&" --- close together, slope estimate may be unreliable"}</span>
                           </div>
                         )}
                       </div>
@@ -418,9 +418,9 @@ export default function UploadPage() {
                     <div className="mb-2 text-[10px] text-purple-300/60">Follow-up summary</div>
                     <div className="flex items-center gap-4">
                       <div><div className="text-xs font-medium text-white">{totalMonths.toFixed(1)} months</div><div className="text-[10px] text-white/35">total follow-up</div></div>
-                      <div className="text-white/15">·</div>
+                      <div className="text-white/15">--</div>
                       <div><div className="text-xs font-medium text-white">{withDates.length} scans</div><div className="text-[10px] text-white/35">submitted</div></div>
-                      {totalMonths<6&&<div className="ml-auto rounded-xl border border-amber-400/20 bg-amber-400/[0.06] px-2 py-1 text-[10px] text-amber-300">⚠ Short follow-up</div>}
+                      {totalMonths<6&&<div className="ml-auto rounded-xl border border-amber-400/20 bg-amber-400/[0.06] px-2 py-1 text-[10px] text-amber-300">--- Short follow-up</div>}
                     </div>
                   </div>
                 );
@@ -445,7 +445,7 @@ export default function UploadPage() {
                 <div>
                   <label className="mb-1.5 block text-xs text-white/50">Age (years)</label>
                   <input type="number" min={18} max={110} value={age} onChange={e=>setAge(e.target.value)} placeholder="e.g. 72" className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder-white/25 outline-none transition focus:border-white/25 focus:bg-white/[0.08]"/>
-                  {age&&Number(age)>0&&<div className="mt-1.5 text-[10px] text-white/35">{Number(age)>=65?"≥ 65 — elevated baseline risk":"< 65 — standard assessment"}</div>}
+                  {age&&Number(age)>0&&<div className="mt-1.5 text-[10px] text-white/35">{Number(age)>=65?"--- 65 --- elevated baseline risk":"< 65 --- standard assessment"}</div>}
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs text-white/50">Education (years)</label>
@@ -464,7 +464,7 @@ export default function UploadPage() {
               {age&&sex&&education&&race&&(
                 <div className="rounded-2xl border border-emerald-400/15 bg-emerald-400/[0.04] p-3">
                   <div className="mb-1 text-[10px] text-emerald-300/60">Demographics confirmed</div>
-                  <div className="text-xs text-white/60">{age}yo {sex==="M"?"male":"female"} · {education} yrs education · {race}</div>
+                  <div className="text-xs text-white/60">{age}yo {sex==="M"?"male":"female"} -- {education} yrs education -- {race}</div>
                 </div>
               )}
               <div className="flex gap-3">
@@ -477,7 +477,7 @@ export default function UploadPage() {
           {/* STEP 3 */}
           {step===3 && (
             <div className="glass pulse-trigger space-y-5 rounded-[28px] p-6">
-              <div><div className="text-sm font-medium text-white">Biomarkers</div><div className="mt-0.5 text-xs text-white/40">Optional — model imputes missing values</div></div>
+              <div><div className="text-sm font-medium text-white">Biomarkers</div><div className="mt-0.5 text-xs text-white/40">Optional --- model imputes missing values</div></div>
               <div>
                 <div className="mb-1.5 flex items-center gap-1.5"><span className="text-xs text-white/50">APOE Genotype</span><InfoTooltip info={INFO.apoe}/></div>
                 <div className="grid grid-cols-3 gap-2">
@@ -491,13 +491,13 @@ export default function UploadPage() {
                 </div>
                 {apoe&&apoe!=="Unknown"&&(()=>{
                   const e4=(apoe.match(/e4/g)||[]).length;
-                  const labels=["No e4 copies · Average risk","1 e4 copy · Elevated risk","2 e4 copies · High risk"];
-                  return (<div className={cn("mt-2 flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[10px]",e4===0?"border border-emerald-400/20 bg-emerald-400/[0.06] text-emerald-300":e4===1?"border border-amber-400/20 bg-amber-400/[0.06] text-amber-300":"border border-red-400/20 bg-red-400/[0.06] text-red-300")}>{e4===0?"✓":"⚠"} {labels[e4]}</div>);
+                  const labels=["No e4 copies -- Average risk","1 e4 copy -- Elevated risk","2 e4 copies -- High risk"];
+                  return (<div className={cn("mt-2 flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[10px]",e4===0?"border border-emerald-400/20 bg-emerald-400/[0.06] text-emerald-300":e4===1?"border border-amber-400/20 bg-amber-400/[0.06] text-amber-300":"border border-red-400/20 bg-red-400/[0.06] text-red-300")}>{e4===0?"---":"---"} {labels[e4]}</div>);
                 })()}
               </div>
               <button type="button" onClick={()=>{ setNoBiomarkers(v=>{ if(!v){setAbeta42("");setTau("");setPtau("");} return !v; }); }}
                 className={cn("flex w-full items-center gap-2.5 rounded-2xl border px-3.5 py-2.5 text-xs transition",noBiomarkers?"border-white/25 bg-white/10 text-white":"border-white/10 bg-white/5 text-white/50 hover:border-white/20 hover:text-white")}>
-                <span className={cn("flex h-4 w-4 shrink-0 items-center justify-center rounded border transition",noBiomarkers?"border-white/50 bg-white/20":"border-white/20 bg-transparent")}>{noBiomarkers&&<span className="text-[9px] text-white">✓</span>}</span>
+                <span className={cn("flex h-4 w-4 shrink-0 items-center justify-center rounded border transition",noBiomarkers?"border-white/50 bg-white/20":"border-white/20 bg-transparent")}>{noBiomarkers&&<span className="text-[9px] text-white">---</span>}</span>
                 No biomarker values available
               </button>
               {!noBiomarkers&&([
@@ -520,7 +520,7 @@ export default function UploadPage() {
               <div className="flex gap-3">
                 <button type="button" onClick={()=>setStep(2)} className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/60 hover:text-white transition"><ChevronLeft className="h-4 w-4"/> Back</button>
                 <button type="button" onClick={()=>step3Valid&&!hasRunningJob&&runPipeline()} disabled={!step3Valid||hasRunningJob} className={cn("flex flex-1 items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-medium transition",hasRunningJob?"border-cyan-400/20 bg-cyan-400/[0.06] text-cyan-300/60 cursor-not-allowed":"border-white/10 bg-white/10 text-white hover:bg-white/15")}>
-                  {hasRunningJob?(<><span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-cyan-400/30 border-t-cyan-400"/>Pipeline running…</>):(<><Zap className="h-4 w-4"/>Run Analysis Pipeline</>)}
+                  {hasRunningJob?(<><span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-cyan-400/30 border-t-cyan-400"/>Pipeline running---</>):(<><Zap className="h-4 w-4"/>Run Analysis Pipeline</>)}
                 </button>
               </div>
             </div>
@@ -552,7 +552,7 @@ export default function UploadPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-white/70">{job.label}</span>
                   <span className={cn("text-[10px] rounded-lg px-2 py-0.5",job.state==="done"?"bg-emerald-400/10 text-emerald-300":job.state==="error"?"bg-red-400/10 text-red-300":"bg-cyan-400/10 text-cyan-300")}>
-                    {job.state==="done"?"Complete":job.state==="error"?"Error":"Running…"}
+                    {job.state==="done"?"Complete":job.state==="error"?"Error":"Running---"}
                   </span>
                 </div>
                 <div className="space-y-1">
@@ -602,12 +602,12 @@ export default function UploadPage() {
                   <div className={`rounded-xl border p-3 space-y-1.5 ${resultClass}`}>
                     <div className="text-[10px] opacity-60">Classification Result</div>
                     <div className="text-sm font-semibold">{pred}</div>
-                    <div className="text-[11px] opacity-70">Confidence: {conf!==undefined?`${(conf*100).toFixed(1)}%`:"—"}</div>
+                    <div className="text-[11px] opacity-70">Confidence: {conf!==undefined?`${(conf*100).toFixed(1)}%`:"---"}</div>
                     {regQc?.ncc_warnings && regQc.ncc_warnings.length > 0 && regQc.ncc_warnings.map((w,i) => (
-                      <div key={i} className="text-[10px] text-amber-300/80">⚠ {w}</div>
+                      <div key={i} className="text-[10px] text-amber-300/80">--- {w}</div>
                     ))}
                     {regQc?.ncc_pass === true && (
-                      <div className="text-[10px] text-emerald-300/60">✓ Registration quality good — NCC: {regQc.ncc_per_scan.map(n => n.toFixed(3)).join(', ')}</div>
+                      <div className="text-[10px] text-emerald-300/60">--- Registration quality good --- NCC: {regQc.ncc_per_scan.map(n => n.toFixed(3)).join(', ')}</div>
                     )}
                     {convRisk!==undefined&&<div className="text-[11px] opacity-70">Conversion risk: {(convRisk*100).toFixed(1)}%</div>}
                     <div className="flex items-center justify-between pt-1">
@@ -640,7 +640,7 @@ export default function UploadPage() {
                     <div key={`${c.id}-${idx}`} className="flex items-center justify-between rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2">
                       <div>
                         <div className="text-xs font-medium text-white/70">{c.id}</div>
-                        <div className={cn("text-[10px]",isAD?"text-red-300":isCN?"text-cyan-300":"text-amber-300")}>{pred} · {(conf*100).toFixed(1)}%</div>
+                        <div className={cn("text-[10px]",isAD?"text-red-300":isCN?"text-cyan-300":"text-amber-300")}>{pred} -- {(conf*100).toFixed(1)}%</div>
                       </div>
                       <button onClick={()=>router.push(`/reports?case=${encodeURIComponent(c.id)}&region=${encodeURIComponent(c.region)}`)}
                         className="text-[10px] text-purple-400 hover:text-purple-300 transition flex items-center gap-1">

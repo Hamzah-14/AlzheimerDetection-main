@@ -246,7 +246,7 @@ const MiniHoverPreviewMRI = memo(function MiniHoverPreviewMRI({
   );
 });
 
-/* ── Risk Stratification Heatmap ─────────────────────────────────────────── */
+/* -- Risk Stratification Heatmap ------------------------------------------- */
 const REGIONS = ["Hippocampus", "Entorhinal", "Temporal", "Prefrontal", "Parietal", "Frontal"] as const;
 
 const RISK_DOT: Record<string, { fill: string; ring: string; label: string }> = {
@@ -288,7 +288,7 @@ function RiskHeatmap({ cases }: { cases: HeatmapCase[] }) {
           {(["High","Medium","Low"] as const).map(r => (
             <span key={r} className={`flex items-center gap-1.5 ${RISK_DOT[r].label}`}>
               <span className={`inline-block h-2 w-2 rounded-full ${RISK_DOT[r].fill}`} />
-              {r} · {counts[r]}
+              {r} -- {counts[r]}
             </span>
           ))}
         </div>
@@ -296,26 +296,26 @@ function RiskHeatmap({ cases }: { cases: HeatmapCase[] }) {
 
       <CardContent>
         <div ref={containerRef} className="relative select-none">
-          {/* ── background risk zones ── */}
+          {/* -- background risk zones -- */}
           <div className="pointer-events-none absolute inset-x-10 bottom-6 top-0 overflow-hidden rounded-xl">
             <div className="absolute inset-x-0 top-0 h-[28%] bg-gradient-to-b from-red-500/10 to-transparent" />
             <div className="absolute inset-x-0 top-[28%] h-[30%] bg-gradient-to-b from-amber-500/6 to-transparent" />
             <div className="absolute bottom-0 inset-x-0 h-[42%] bg-gradient-to-t from-cyan-500/8 to-transparent" />
           </div>
 
-          {/* ── threshold lines ── */}
+          {/* -- threshold lines -- */}
           <div className="pointer-events-none absolute inset-x-10 bottom-6 top-0">
             {/* High / Medium boundary at 68% */}
             <div className="absolute inset-x-0 border-t border-dashed border-red-400/20" style={{ top: "32%" }}>
-              <span className="absolute -top-3 right-0 text-[9px] text-red-400/50">High risk ≥ 68%</span>
+              <span className="absolute -top-3 right-0 text-[9px] text-red-400/50">High risk --- 68%</span>
             </div>
             {/* Medium / Low boundary at 45% */}
             <div className="absolute inset-x-0 border-t border-dashed border-amber-400/20" style={{ top: "55%" }}>
-              <span className="absolute -top-3 right-0 text-[9px] text-amber-400/50">Med ≥ 45%</span>
+              <span className="absolute -top-3 right-0 text-[9px] text-amber-400/50">Med --- 45%</span>
             </div>
           </div>
 
-          {/* ── plot area ── */}
+          {/* -- plot area -- */}
           <div className="relative h-52 pl-10 pb-6">
             {/* Y-axis labels */}
             <div className="pointer-events-none absolute left-0 top-0 flex h-full flex-col justify-between pb-1 text-[9px] text-white/30">
@@ -354,7 +354,7 @@ function RiskHeatmap({ cases }: { cases: HeatmapCase[] }) {
             </div>
           </div>
 
-          {/* ── hover tooltip ── */}
+          {/* -- hover tooltip -- */}
           {hovered && (
             <div
               data-heatmap-tooltip
@@ -392,7 +392,7 @@ function RiskHeatmap({ cases }: { cases: HeatmapCase[] }) {
         </div>
 
         <p className="mt-2 text-[11px] text-white/35">
-          Each dot is one case. Y = AI confidence · X = brain region. Hover to inspect.
+          Each dot is one case. Y = AI confidence -- X = brain region. Hover to inspect.
         </p>
       </CardContent>
     </Card>
@@ -409,16 +409,16 @@ export default function DashboardPage() {
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const unmountPreviewRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /* ── One-time tour auto-start when coming from the landing page ──
+  /* -- One-time tour auto-start when coming from the landing page --
    *  Strict Mode runs effects twice; the flag is consumed on the first
    *  invocation so the second invocation is always a no-op.
-   *  No cleanup is returned intentionally — see onboarding-tour.tsx note.
-   * ─────────────────────────────────────────────────────────────── */
+   *  No cleanup is returned intentionally --- see onboarding-tour.tsx note.
+   * --------------------------------------------------------------- */
   useEffect(() => {
     try {
       const pending = sessionStorage.getItem(PENDING_KEY);
       if (!pending) return;
-      sessionStorage.removeItem(PENDING_KEY); // consume — Strict Mode run-2 sees null → no-op
+      sessionStorage.removeItem(PENDING_KEY); // consume --- Strict Mode run-2 sees null --- no-op
     } catch {
       return;
     }
@@ -455,7 +455,7 @@ export default function DashboardPage() {
   const highRisk       = realCases.filter(c => c.risk === "High").length + 6;
   const inQueue        = Math.max(0, 3 - realCases.length);
 
-  /* ── Throughput chart ─────────────────────────────────────────── */
+  /* -- Throughput chart ------------------------------------------- */
   const throughput = [10, 12, 14, 13, 16, 18, 28];
   const maxThroughput = Math.max(...throughput);
   const dayLabels = useMemo(() => {
@@ -543,7 +543,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex h-[calc(100vh-88px)] flex-col overflow-y-auto p-6 pb-6">
-      {/* ── Hero ──────────────────────────────────────────────── */}
+      {/* -- Hero ------------------------------------------------ */}
       <div className="mb-6 flex flex-col gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
@@ -552,7 +552,7 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* ── Quick Actions ──────────────────────────────────── */}
+        {/* -- Quick Actions ------------------------------------ */}
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => router.push("/upload")}
@@ -621,7 +621,7 @@ export default function DashboardPage() {
         <StatCard
           title="Scans in queue"
           numericValue={inQueue}
-          sub="Upload → preprocess → infer"
+          sub="Upload --- preprocess --- infer"
           trend={-25}
           icon={Scan}
           spark={[6, 5, 5, 4, 4, 3, 3]}
@@ -642,8 +642,8 @@ export default function DashboardPage() {
           <CardContent className="flex flex-col">
             {storeCases.length === 0 && (
               <div className="mb-3 flex items-center justify-between rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-2.5 text-xs text-white/45">
-                No real cases yet — demo data shown below
-                <a href="/upload" className="text-purple-400 hover:text-purple-300 transition">Upload a case →</a>
+                No real cases yet --- demo data shown below
+                <a href="/upload" className="text-purple-400 hover:text-purple-300 transition">Upload a case ---</a>
               </div>
             )}
             <div
@@ -711,7 +711,7 @@ export default function DashboardPage() {
           </CardHeader>
 
           <CardContent className="space-y-3 pb-4">
-            {/* ── Throughput chart ────────────────────────────────── */}
+            {/* -- Throughput chart ---------------------------------- */}
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="mb-3 flex items-center justify-between text-xs text-white/50">
                 <span>Weekly Throughput</span>
@@ -738,17 +738,17 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* ── Model info ──────────────────────────────────────── */}
+            {/* -- Model info ---------------------------------------- */}
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="flex items-center gap-2 text-sm text-white/70">
                 <Cpu className="h-4 w-4 text-white/50" />
                 Pipeline
               </div>
               <div className="mt-1 font-semibold">
-                3D GLCM → Radiomics → Classifier
+                3D GLCM --- Radiomics --- Classifier
               </div>
               <div className="mt-1 text-xs text-white/55">
-                Contrast · Energy · Homogeneity (13-dir)
+                Contrast -- Energy -- Homogeneity (13-dir)
               </div>
             </div>
 
@@ -757,7 +757,7 @@ export default function DashboardPage() {
                 <Zap className="h-4 w-4 text-white/50" />
                 Deployment
               </div>
-              <div className="mt-1 font-semibold">Edge-ready · PYNQ-Z2</div>
+              <div className="mt-1 font-semibold">Edge-ready -- PYNQ-Z2</div>
               <div className="mt-1 text-xs text-white/55">
                 Heatmap + Feature Attribution overlays
               </div>
@@ -766,7 +766,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* ── Risk Stratification Heatmap ─────────────────────── */}
+      {/* -- Risk Stratification Heatmap ----------------------- */}
       <div className="mt-4 pb-6">
         <RiskHeatmap cases={HEATMAP_CASES} />
       </div>

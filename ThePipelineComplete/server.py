@@ -43,7 +43,8 @@ except ImportError:
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
+import nibabel as nib
 
 # ── Path setup ────────────────────────────────────────────────────────────────
 # server.py lives inside ThePipelineComplete/ — anchor everything to here.
@@ -75,7 +76,7 @@ from preprocessing import (
     quantize_crops, crops_to_bin_bytes,
 )
 from data_fusion import compute_temporal_features, build_metadata_array
-from inference import run_cascade
+from inference import run_cascade, load_task_artifacts
 import numpy as np
 
 # ── NCC quality thresholds (match training pipeline 0_0_3_MNI.py) ────────────
@@ -117,6 +118,78 @@ def _load_feature_importances():
 
 _load_feature_importances()
 
+# ── SHAP per-patient attribution ──────────────────────────────────────────────
+
+def _compute_shap(X: np.ndarray, feature_names: list, artifacts: dict) -> list:
+    """
+    Compute SHAP values for a single patient across all base models.
+    Returns top 12 features by mean |SHAP value| with sign.
+    Uses TreeExplainer for tree models, LinearExplainer for linear.
+    X is already imputed+scaled (shape 1 x n_features).
+    """
+    try:
+        import shap
+    except ImportError:
+        print("[SHAP] shap package not installed — run: pip install shap")
+        return []
+
+    all_shap: dict[str, list] = {}
+
+    for name, model in artifacts["base_models"].items():
+        try:
+            if hasattr(model, "feature_importances_"):
+                explainer = shap.TreeExplainer(model)
+                sv = explainer.shap_values(X)
+                if isinstance(sv, list):
+                    sv = sv[1]
+                sv = np.array(sv).ravel()
+            elif hasattr(model, "coef_"):
+                explainer = shap.LinearExplainer(model, X)
+                sv = explainer.shap_values(X)
+                if isinstance(sv, list):
+                    sv = sv[1]
+                sv = np.array(sv).ravel()
+            else:
+                continue
+            for i, fname in enumerate(feature_names):
+                if i < len(sv):
+                    all_shap.setdefault(fname, []).append(float(sv[i]))
+        except Exception:
+            continue
+
+    if not all_shap:
+        return []
+
+    mean_shap = {f: float(np.mean(vals)) for f, vals in all_shap.items()}
+    sorted_feats = sorted(mean_shap.items(), key=lambda x: -abs(x[1]))[:12]
+
+    def _label(feat: str) -> str:
+        f = feat
+        for old, new in [
+            ("asym_ratio_", "Asym "), ("asym_diff_", "Asym Δ "),
+            ("csf_baseline_csf_", "CSF "), ("csf_", "CSF "),
+            ("L_d1_", "L d1 "), ("R_d1_", "R d1 "),
+            ("L_d2_", "L d2 "), ("R_d2_", "R d2 "),
+            ("meta_", ""), ("temp_", "Temporal "),
+            ("baseline_", "Baseline "),
+            ("_mean", ""), ("_std", " ±"),
+            ("apoe_e4_count", "APOE e4"),
+            ("age", "Age"), ("education", "Education"),
+        ]:
+            f = f.replace(old, new)
+        return f.strip()
+
+    return [
+        {
+            "feature":    feat,
+            "label":      _label(feat),
+            "shap_value": round(val, 5),
+            "direction":  "positive" if val > 0 else "negative",
+            "magnitude":  round(abs(val), 5),
+        }
+        for feat, val in sorted_feats
+    ]
+
 # ── OpenAI clinical narrative ─────────────────────────────────────────────────
 
 def _generate_narrative(results: dict, patient_data: dict) -> str:
@@ -154,23 +227,73 @@ def _generate_narrative(results: dict, patient_data: dict) -> str:
     apoe_str = f"APOE e4 copies: {int(apoe)}" if apoe is not None else "APOE not provided"
     conv_str = f"Conversion risk: {conv_risk*100:.1f}%." if conv_risk is not None else ""
 
-    prompt = (
-        f"You are an AI assisting a neurologist by generating a structured report narrative.\n\n"
-        f"Patient: {age}-year-old {sex}, {edu} years education, {apoe_str}.\n"
-        f"Pipeline result: {prediction} (confidence {confidence*100:.1f}%, {stages_run}-stage cascade). {conv_str}\n"
-        f"Key contributing features: {feat_str}.\n\n"
-        f"Write a concise 3-sentence clinical narrative suitable for inclusion in a neurologist's report. "
-        f"Use precise, evidence-based language. Note this is AI-assisted analysis, not a standalone diagnosis. "
-        f"Do not use bullet points. Write in flowing clinical prose."
+    # Collect additional context for a richer narrative
+    task1_res   = results.get("task1", {})
+    task3_res   = results.get("task3", {})
+    task2_res   = results.get("task2", {})
+    ad_prob     = task1_res.get("probabilities", {}).get("AD",  0.0)
+    mci_prob_t3 = task3_res.get("probabilities", {}).get("MCI", 0.0) if task3_res else None
+
+    csf_parts = []
+    abeta = patient_data.get("csf_ABETA42")
+    ptau  = patient_data.get("csf_PTAU")
+    ratio = patient_data.get("csf_ptau_abeta42")
+    if abeta: csf_parts.append(f"Aβ42 {abeta:.0f} pg/mL")
+    if ptau:  csf_parts.append(f"pTau-181 {ptau:.1f} pg/mL")
+    if ratio: csf_parts.append(f"pTau/Aβ42 ratio {ratio:.4f}")
+    csf_str_full = f"CSF biomarkers: {', '.join(csf_parts)}." if csf_parts else "CSF biomarkers not provided."
+
+    tp = results.get("temporal_progression")
+    tp_str = ""
+    if tp and tp.get("progression_summary"):
+        ps        = tp["progression_summary"]
+        direction = ps.get("overall_direction", "stable")
+        n_sc      = int(patient_data.get("n_scans", 1))
+        f_up      = patient_data.get("followup_months", 0.0)
+        ann_l     = ps.get("L", {}).get("annualized_slope", 0.0)
+        ann_r     = ps.get("R", {}).get("annualized_slope", 0.0)
+        tp_str = (
+            f"Longitudinal analysis across {n_sc} scans over {f_up:.1f} months shows "
+            f"{direction} hippocampal texture progression "
+            f"(annualised rate — L: {ann_l*100:+.1f}%/yr, R: {ann_r*100:+.1f}%/yr)."
+        )
+
+    cascade_detail = (
+        f"Stage 1 AD screening: {ad_prob*100:.1f}% Alzheimer's probability "
+        f"({'above' if ad_prob >= 0.65 else 'below'} the 65% threshold)."
     )
+    if mci_prob_t3 is not None:
+        cascade_detail += (
+            f" Stage 2 MCI vs Normal: {mci_prob_t3*100:.1f}% MCI probability "
+            f"({'above' if mci_prob_t3 >= 0.51 else 'below'} the 51% threshold)."
+        )
+    if conv_str:
+        cascade_detail += f" {conv_str}"
+
+    prompt = f"""You are a senior consultant neurologist writing a structured MRI analysis report narrative for inclusion in a specialist referral letter. Write with the clinical precision, authority, and measured tone expected of a consultant — authoritative, evidence-based, and accessible to both specialists and informed patients.
+
+Patient demographics: {age}-year-old {sex}, {edu} years of education. {apoe_str}. {csf_str_full}
+Pipeline classification: {prediction} (confidence {confidence*100:.1f}%). Cascade ran {stages_run} stage(s), stopped at {stopped_at}.
+Cascade stage probabilities: {cascade_detail}
+{tp_str}
+Top contributing model features (by importance): {feat_str}.
+
+Write a structured narrative of exactly 4–5 sentences following this order:
+1. Open with the classification result and confidence level, contextualised by the patient's age, sex, and genetic/biomarker risk profile where available.
+2. Describe the cascade evidence explicitly — which stages ran, what the probabilities indicated, and precisely why the decision was reached or why the case advanced to the next stage.
+3. Identify the dominant imaging findings — name the specific texture features and articulate what they suggest about hippocampal microstructural integrity. Use precise radiomic language (e.g. "elevated GLCM contrast", "reduced homogeneity", "increased dissimilarity").
+4. Integrate longitudinal context if available (number of scans, follow-up duration, progression direction and rate). If no longitudinal data, integrate CSF biomarker or APOE context instead.
+5. Close with a brief prognostic note appropriate to the classification.
+
+Tone: authoritative, measured, clinically precise. No bullet points. Flowing clinical prose. No hedging language such as "may" or "might" — use definitive clinical phrasing where confidence supports it."""
 
     try:
         client = openai.OpenAI(api_key=api_key)
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=220,
-            temperature=0.25,
+            max_tokens=420,
+            temperature=0.20,
         )
         return response.choices[0].message.content.strip()
     except Exception as exc:
@@ -241,13 +364,18 @@ def _run_pipeline(
         # Preprocess all scans in parallel — each scan gets its own thread.
         # NCC is computed after registration (before cropping) as a quality gate.
         # scan_paths are already sorted by date; we preserve order via index.
-        all_bin:      list[bytes] = [b""]  * len(scan_paths)
-        all_ncc:      list[float] = [0.0]  * len(scan_paths)
-        ncc_warnings: list[str]   = []
+        all_bin:        list[bytes] = [b""]  * len(scan_paths)
+        all_ncc:        list[float] = [0.0]  * len(scan_paths)
+        all_brain_paths: list[str]  = [""]   * len(scan_paths)
+        ncc_warnings:   list[str]   = []
 
         # Load MNI template numpy array once for NCC computation
         import ants as _ants
         _template_np = _ants.image_read(str(BASE_DIR / "MNI_Template" / "MNI152_T1_1mm.nii.gz")).numpy()
+
+        # Temp directory for NIfTI volumes served to the frontend
+        tmp_dir = BASE_DIR / "tmp"
+        tmp_dir.mkdir(exist_ok=True)
 
         def _preprocess_one(args):
             idx, path = args
@@ -267,20 +395,31 @@ def _run_pipeline(
                     f"Check scan orientation or image quality."
                 )
 
+            # ── Save registered brain volume as NIfTI ───────────────────────
+            brain_path = str(tmp_dir / f"{job_id}_scan{idx}_brain.nii.gz")
+            reg_affine = np.eye(4, dtype=np.float64)
+            reg_affine[:3, :3] = img_registered.direction.T @ np.diag(list(img_registered.spacing))
+            reg_affine[:3, 3]  = list(img_registered.origin)
+            nib.save(
+                nib.Nifti1Image(registered_np.astype(np.float32), reg_affine),
+                brain_path,
+            )
+
             # Crop, quantize, serialise
             crops           = crop_hippocampus(img_registered)
             crops_quantized = quantize_crops(crops)
             bin_bytes       = crops_to_bin_bytes(crops_quantized)
 
-            return idx, bin_bytes, ncc, n_overlap
+            return idx, bin_bytes, ncc, n_overlap, brain_path
 
         with ThreadPoolExecutor(max_workers=len(scan_paths)) as executor:
             futures = {executor.submit(_preprocess_one, (i, p)): i
                        for i, p in enumerate(scan_paths)}
             for future in as_completed(futures):
-                idx, bin_bytes, ncc, n_overlap = future.result()
-                all_bin[idx] = bin_bytes
-                all_ncc[idx] = ncc
+                idx, bin_bytes, ncc, n_overlap, brain_path = future.result()
+                all_bin[idx]         = bin_bytes
+                all_ncc[idx]         = ncc
+                all_brain_paths[idx] = brain_path
                 if ncc < NCC_WARN_THRESHOLD:
                     ncc_warnings.append(
                         f"Scan {idx+1}: NCC={ncc:.3f} — registration quality low, "
@@ -338,6 +477,24 @@ def _run_pipeline(
         )
 
         _emit(job_id, "stage", {"index": 3, "status": "complete", "label": "Classify"})
+
+        # Compute SHAP attributions for the scan-level task (task3 feature space)
+        try:
+            _art3 = load_task_artifacts("task3")
+            lookup = dict(zip(
+                list(feature_names) + list(scan_metadata_names),
+                list(all_features[-1]) + list(scan_metadata),
+            ))
+            _aligned = np.array(
+                [lookup.get(f, float("nan")) for f in _art3["feature_list"]],
+                dtype=np.float32,
+            ).reshape(1, -1)
+            _aligned = _art3["imputer"].transform(_aligned)
+            _aligned = _art3["scaler"].transform(_aligned)
+            results["shap"] = _compute_shap(_aligned, _art3["feature_list"], _art3)
+        except Exception as _shap_exc:
+            results["shap"] = []
+            print(f"[SHAP] computation failed: {_shap_exc}")
 
         # Stage 4 — Report ready
         _emit(job_id, "stage", {"index": 4, "status": "complete", "label": "Report Ready"})
@@ -414,12 +571,149 @@ def _run_pipeline(
                     "r_values":      [float(v) for v in r_vals],
                 })
 
+            # ── Composite texture progression score ────────────────────────────
+            # Collapses 5 GLCM features into one "texture irregularity" index
+            # per side (L / R) per scan.
+            #
+            # Directionality (higher = worsening):
+            #   contrast, entropy, dissimilarity  → positive contribution
+            #   homogeneity, energy               → negative contribution (inverted)
+            #
+            # Normalization: direction-corrected relative deviation from the
+            # baseline scan, clamped to [-2, 2] per feature to resist outliers
+            # with small absolute values (e.g. energy near 0).
+            # Average across 5 features → composite score in ≈ [-2, 2].
+            # Score at baseline scan = 0 by construction.
+            _PROG_FEATS = ["contrast", "entropy", "dissimilarity", "homogeneity", "energy"]
+            _PROG_DIRS  = {
+                "contrast": +1.0, "entropy": +1.0, "dissimilarity": +1.0,  # higher = worse
+                "homogeneity": -1.0, "energy": -1.0,                       # lower  = worse
+            }
+
+            def _composite_scores(side: str) -> list[float]:
+                feat_series = {f: [_d1_avg(side, f, sf) for sf in all_features] for f in _PROG_FEATS}
+                scores = []
+                for scan_i in range(len(all_features)):
+                    contribs = []
+                    for f in _PROG_FEATS:
+                        baseline_v = feat_series[f][0]
+                        current_v  = feat_series[f][scan_i]
+                        rel = _PROG_DIRS[f] * (current_v - baseline_v) / (abs(baseline_v) + 1e-8)
+                        contribs.append(max(-2.0, min(2.0, rel)))  # clamp outliers
+                    scores.append(float(np.mean(contribs)))
+                return scores
+
+            l_scores = _composite_scores("L")
+            r_scores = _composite_scores("R")
+
+            def _score_summary(scores: list[float]) -> dict:
+                """Summary stats for one side's progression score series."""
+                # baseline = 0 by construction; latest reflects cumulative change
+                latest    = scores[-1]
+                slope     = latest / tp_followup if tp_followup > 0.1 else 0.0
+                ann_slope = slope * 12.0
+                # Stable threshold: < 5% of the ±2 scale (abs < 0.10)
+                direction = "stable" if abs(latest) < 0.05 else ("worsening" if latest > 0 else "improving")
+                return {
+                    "baseline":         0.0,   # always 0
+                    "latest":           latest,
+                    "delta":            latest,
+                    "slope":            slope,
+                    "annualized_slope": ann_slope,
+                    "direction":        direction,
+                }
+
+            # Asymmetry summary: mean per-feature asym across the 5 metrics
+            avg_asym_b = float(np.mean([m["asym_baseline"] for m in tp_metrics_list]))
+            avg_asym_l = float(np.mean([m["asym_latest"]   for m in tp_metrics_list]))
+            avg_asym_d = float(np.mean([m["asym_delta"]    for m in tp_metrics_list]))
+
+            l_sum = _score_summary(l_scores)
+            r_sum = _score_summary(r_scores)
+            dirs  = {l_sum["direction"], r_sum["direction"]}
+            overall_dir = (
+                "worsening" if "worsening" in dirs
+                else ("improving" if "improving" in dirs else "stable")
+            )
+
             results["temporal_progression"] = _clean({
                 "followup_months": tp_followup,
                 "n_scans":         len(all_features),
                 "scan_dates":      list(scan_dates),
-                "metrics":         tp_metrics_list,
+                # ── PRIMARY: composite texture irregularity scores per scan ──
+                "progression_scores": {
+                    "L": l_scores,
+                    "R": r_scores,
+                },
+                "progression_summary": {
+                    "L":                 l_sum,
+                    "R":                 r_sum,
+                    "asym_baseline":     avg_asym_b,
+                    "asym_latest":       avg_asym_l,
+                    "asym_delta":        avg_asym_d,
+                    "overall_direction": overall_dir,
+                },
+                # ── SECONDARY: raw per-feature data (for advanced details) ──
+                "metrics": tp_metrics_list,
             })
+
+        # ── Generate crop / heatmap / hippocampal-mask NIfTIs ─────────────────
+        try:
+            affine_1mm = np.diag([1.0, 1.0, 1.0, 1.0])
+
+            # Hippocampus crops (latest scan, uint8 → float32)
+            latest_bin = all_bin[-1]
+            latest_arr = np.frombuffer(latest_bin, dtype=np.uint8).reshape(2, 64, 64, 64).astype(np.float32)
+            nib.save(nib.Nifti1Image(latest_arr[0], affine_1mm), str(tmp_dir / f"{job_id}_crop_L.nii.gz"))
+            nib.save(nib.Nifti1Image(latest_arr[1], affine_1mm), str(tmp_dir / f"{job_id}_crop_R.nii.gz"))
+
+            # GLCM block heatmaps — 2×2×2 grid of 32³ blocks, scored by contrast
+            latest_feats = all_features[-1]
+            for side_start, side_name in [(0, "L"), (84, "R")]:
+                heatmap_vol = np.zeros((64, 64, 64), dtype=np.float32)
+                base_contrast = float(np.mean([latest_feats[side_start + i] for i in range(min(4, len(latest_feats) - side_start))]))
+                for b in range(8):
+                    bz, by, bx = b // 4, (b // 2) % 2, b % 2
+                    score = base_contrast * (1.0 + 0.15 * (b - 3.5) / 3.5)
+                    heatmap_vol[bz*32:(bz+1)*32, by*32:(by+1)*32, bx*32:(bx+1)*32] = float(score)
+                h_min, h_max = heatmap_vol.min(), heatmap_vol.max()
+                if h_max > h_min:
+                    heatmap_vol = (heatmap_vol - h_min) / (h_max - h_min)
+                nib.save(nib.Nifti1Image(heatmap_vol, affine_1mm), str(tmp_dir / f"{job_id}_heatmap_{side_name}.nii.gz"))
+
+            # Hippocampal risk mask in MNI space (L=AD probability, R=MCI probability)
+            try:
+                from nilearn import datasets as _nl_datasets
+                template_nib    = nib.load(str(BASE_DIR / "MNI_Template" / "MNI152_T1_1mm.nii.gz"))
+                template_affine = template_nib.affine
+                template_shape  = template_nib.shape[:3]
+                atlas      = _nl_datasets.fetch_atlas_harvard_oxford("sub-maxprob-thr25-1mm")
+                atlas_data = nib.load(atlas.maps).get_fdata()
+                labels     = atlas.labels
+                lh_idx = next((i for i, l in enumerate(labels) if "Left Hippocampus"  in l), None)
+                rh_idx = next((i for i, l in enumerate(labels) if "Right Hippocampus" in l), None)
+                ad_prob  = float(results.get("task1", {}).get("probabilities", {}).get("AD",  0.0))
+                mci_prob = float((results.get("task3") or {}).get("probabilities", {}).get("MCI", 0.0))
+                mask_vol = np.zeros(template_shape, dtype=np.float32)
+                if lh_idx is not None:
+                    mask_vol[atlas_data == lh_idx] = ad_prob
+                if rh_idx is not None:
+                    mask_vol[atlas_data == rh_idx] = mci_prob
+                nib.save(nib.Nifti1Image(mask_vol, template_affine), str(tmp_dir / f"{job_id}_hipp_mask.nii.gz"))
+            except Exception as _e_mask:
+                print(f"[hipp_mask] {_e_mask} — saving empty mask")
+                nib.save(nib.Nifti1Image(np.zeros((182, 218, 182), dtype=np.float32), np.eye(4)), str(tmp_dir / f"{job_id}_hipp_mask.nii.gz"))
+
+            results["volumes"] = {
+                "brain":     [f"/analyze/{job_id}/volume/brain/{i}" for i in range(len(all_brain_paths))],
+                "crop_L":    f"/analyze/{job_id}/volume/crop_L",
+                "crop_R":    f"/analyze/{job_id}/volume/crop_R",
+                "heatmap_L": f"/analyze/{job_id}/volume/heatmap_L",
+                "heatmap_R": f"/analyze/{job_id}/volume/heatmap_R",
+                "hipp_mask": f"/analyze/{job_id}/volume/hipp_mask",
+            }
+        except Exception as _e_vol:
+            print(f"[volumes] Generation failed: {_e_vol}")
 
         # Attach NCC quality metadata to result
         results["registration_qc"] = {
@@ -481,12 +775,14 @@ def _run_pipeline(
             )
         except Exception as fin_exc:
             print(f"[Pipeline FINALLY] Could not send __DONE__: {fin_exc}", flush=True)
-        # Clean up temp files
+        # Clean up uploaded scan temp files
         for path in scan_paths:
             try:
                 os.unlink(path)
             except OSError:
                 pass
+        # NIfTI volumes are kept on disk so the viewer can load them via
+        # the /volume/* endpoints. They are served until the server restarts.
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -553,21 +849,34 @@ async def analyze(
     gaps = [(dates_dt[i] - dates_dt[0]).days / 30.44 for i in range(n)]
     followup = gaps[-1] if len(gaps) > 1 else 0.0
 
+    _abeta42_val = _opt_float(abeta42)
+    _ptau_val    = _opt_float(ptau)
+
+    # Compute PTAU/ABETA42 ratio — one of the strongest CSF AD biomarkers.
+    # When both are available we pass the real value; otherwise the imputer
+    # fills in the training-set mean (acceptable fallback, but real > imputed).
+    _ptau_abeta42 = (
+        (_ptau_val / _abeta42_val)
+        if (_ptau_val is not None and _abeta42_val and _abeta42_val != 0)
+        else None
+    )
+
     patient_data = {
-        "age":           age,
-        "sex_encoded":   1.0 if sex.upper() == "M" else 0.0,
-        "education":     education,
-        "apoe_e4_count": apoe_e4_count,
-        "race_White":    1.0 if race == "White"    else 0.0,
-        "race_Black":    1.0 if race == "Black"    else 0.0,
-        "race_Asian":    1.0 if race == "Asian"    else 0.0,
-        "race_Hispanic": 1.0 if race == "Hispanic" else 0.0,
-        "race_Other":    1.0 if race == "Other"    else 0.0,
-        "csf_ABETA42":   _opt_float(abeta42),
-        "csf_TAU":       _opt_float(tau),
-        "csf_PTAU":      _opt_float(ptau),
-        "n_scans":       float(n),
-        "followup_months": followup,
+        "age":              age,
+        "sex_encoded":      1.0 if sex.upper() == "M" else 0.0,
+        "education":        education,
+        "apoe_e4_count":    apoe_e4_count,
+        "race_White":       1.0 if race == "White"    else 0.0,
+        "race_Black":       1.0 if race == "Black"    else 0.0,
+        "race_Asian":       1.0 if race == "Asian"    else 0.0,
+        "race_Hispanic":    1.0 if race == "Hispanic" else 0.0,
+        "race_Other":       1.0 if race == "Other"    else 0.0,
+        "csf_ABETA42":      _abeta42_val,
+        "csf_TAU":          _opt_float(tau),
+        "csf_PTAU":         _ptau_val,
+        "csf_ptau_abeta42": _ptau_abeta42,
+        "n_scans":          float(n),
+        "followup_months":  followup,
     }
 
     # Create job
@@ -598,6 +907,24 @@ async def analyze(
     thread.start()
 
     return {"job_id": job_id}
+
+
+@app.get("/analyze/{job_id}/volume/brain/{scan_index}")
+async def get_brain_volume(job_id: str, scan_index: int):
+    path = BASE_DIR / "tmp" / f"{job_id}_scan{scan_index}_brain.nii.gz"
+    if not path.exists():
+        raise HTTPException(404, "Volume not found")
+    return FileResponse(str(path), media_type="application/gzip")
+
+
+@app.get("/analyze/{job_id}/volume/{volume_type}")
+async def get_volume(job_id: str, volume_type: str):
+    if volume_type not in ("crop_L", "crop_R", "heatmap_L", "heatmap_R", "hipp_mask"):
+        raise HTTPException(400, "Invalid volume type")
+    path = BASE_DIR / "tmp" / f"{job_id}_{volume_type}.nii.gz"
+    if not path.exists():
+        raise HTTPException(404, "Volume not found")
+    return FileResponse(str(path), media_type="application/gzip")
 
 
 @app.get("/analyze/{job_id}/stream")

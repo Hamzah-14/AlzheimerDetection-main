@@ -10,22 +10,22 @@ const DONE_KEY = "synapse-tour-done";
 const PENDING_KEY = "synapse-show-tour"; // set by landing page before routing
 const PAD = 10;
 
-/* 5 steps — command-hint merged into topbar-search */
+/* 5 steps --- command-hint merged into topbar-search */
 const STEPS = [
   {
     selector: "[data-tour='sidebar-header']",
     title: "Your Control Panel",
-    desc: "Navigate between Dashboard, MRI Viewer, Explainability, Analytics, Reports and more — everything lives in the sidebar.",
+    desc: "Navigate between Dashboard, MRI Viewer, Explainability, Analytics, Reports and more --- everything lives in the sidebar.",
   },
   {
     selector: "[data-tour='topbar-search']",
     title: "Search & Command Palette",
-    desc: "Click here or press ⌘K (Mac) / Ctrl+K (Windows) to open the command palette — search cases, jump to any page, or trigger actions instantly.",
+    desc: "Click here or press ---K (Mac) / Ctrl+K (Windows) to open the command palette --- search cases, jump to any page, or trigger actions instantly.",
   },
   {
     selector: "[data-tour='fpga-status']",
     title: "Live FPGA Metrics",
-    desc: "Real-time stats from the PYNQ-Z2 board — utilisation, inference latency, and system status update every second.",
+    desc: "Real-time stats from the PYNQ-Z2 board --- utilisation, inference latency, and system status update every second.",
   },
   {
     selector: "[data-tour='theme-toggle']",
@@ -45,9 +45,9 @@ export function OnboardingTour() {
   const { active, step, start, setStep, end } = useTourStore();
   const [rect, setRect] = useState<SpotRect | null>(null);
 
-  /* Auto-start is handled by dashboard/page.tsx — nothing to do here */
+  /* Auto-start is handled by dashboard/page.tsx --- nothing to do here */
 
-  /* ── Compute target bounding rect ───────────────────────────── */
+  /* ------ Compute target bounding rect --------------------------------------------------------------------------------------- */
   const computeRect = useCallback(() => {
     const selector = STEPS[step]?.selector;
     if (!selector) return;
@@ -69,7 +69,7 @@ export function OnboardingTour() {
     };
   }, [active, step, computeRect]);
 
-  /* ── Keyboard nav ────────────────────────────────────────────── */
+  /* ------ Keyboard nav ------------------------------------------------------------------------------------------------------------------------------------------ */
   useEffect(() => {
     if (!active) return;
     const handler = (e: KeyboardEvent) => {
@@ -128,7 +128,7 @@ export function OnboardingTour() {
       <AnimatePresence mode="wait">
         {active && (
           <>
-            {/* ── Spotlight ─────────────────────────────────────── */}
+            {/* ------ Spotlight --------------------------------------------------------------------------------------------------------------------- */}
             <motion.div
               key={`spot-${step}`}
               initial={{ opacity: 0 }}
@@ -149,7 +149,7 @@ export function OnboardingTour() {
               }}
             />
 
-            {/* ── Tooltip ───────────────────────────────────────── */}
+            {/* ------ Tooltip --------------------------------------------------------------------------------------------------------------------------- */}
             <motion.div
               key={`tip-${step}`}
               initial={{ opacity: 0, y: above ? 10 : -10, scale: 0.96 }}

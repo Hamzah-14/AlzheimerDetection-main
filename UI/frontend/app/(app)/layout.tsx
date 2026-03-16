@@ -15,7 +15,7 @@ import NeuroAssist from "@/components/ui/neuro-assist";
 export default function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
-  /* No mousemove handler needed — background animation is CSS-only (compositor). */
+  /* No mousemove handler needed --- background animation is CSS-only (compositor). */
 
   return (
     <ThemeProvider>
@@ -26,7 +26,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <div className="flex min-h-screen flex-1 flex-col">
             <Topbar />
 
-            {/* ── Page transition wrapper ── */}
+            {/* ------ Page transition wrapper ------ */}
             <AnimatePresence mode="wait" initial={false}>
               <motion.main
                 key={pathname}
@@ -42,7 +42,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        {/* ── Global overlays ── */}
+        {/* ------ Global overlays ------ */}
         <CommandPalette />
         <ToastStack />
         <OnboardingTour />
