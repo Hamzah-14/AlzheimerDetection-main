@@ -1,4 +1,4 @@
-// app/api/neuroassist/route.ts — Groq version
+// app/api/neuroassist/route.ts --- Groq version
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {

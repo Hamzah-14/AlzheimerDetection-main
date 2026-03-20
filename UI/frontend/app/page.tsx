@@ -22,10 +22,10 @@ import {
 } from "lucide-react";
 import { usePageTitle } from "@/lib/use-page-title";
 
-/* ─────────────────────────────────────────────────────────────
-   Local theme hook – reads data-theme directly (ThemeProvider
+/* -------------------------------------------------------------
+   Local theme hook --- reads data-theme directly (ThemeProvider
    only lives inside (app)/layout; this page is outside it).
-───────────────────────────────────────────────────────────── */
+------------------------------------------------------------- */
 function useLocalTheme() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
 
@@ -58,9 +58,9 @@ function useLocalTheme() {
   return { theme, toggle };
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------
    3-D Neural-Network Canvas
-───────────────────────────────────────────────────────────── */
+------------------------------------------------------------- */
 interface Node3D {
   x: number;
   y: number;
@@ -182,7 +182,7 @@ function NeuralCanvas({ theme }: { theme: "dark" | "light" }) {
     const ro = new ResizeObserver(resize);
     ro.observe(canvas);
 
-    /* Project 3-D point → 2-D screen with perspective */
+    /* Project 3-D point --- 2-D screen with perspective */
     const project = (x: number, y: number, z: number) => {
       const cx = rotRef.current.x;
       const cy = rotRef.current.y;
@@ -247,7 +247,7 @@ function NeuralCanvas({ theme }: { theme: "dark" | "light" }) {
       const projected = nodes.map((n, i) => ({ i, ...project(n.x, n.y, n.z) }));
       projected.sort((a, b) => a.depth - b.depth);
 
-      /* A fast lookup: nodeIndex → projected data */
+      /* A fast lookup: nodeIndex --- projected data */
       const projMap = new Map(projected.map((p) => [p.i, p]));
 
       const edgeAlpha = dark ? 0.22 : 0.14;
@@ -330,9 +330,9 @@ function NeuralCanvas({ theme }: { theme: "dark" | "light" }) {
   );
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------
    Scroll-reveal wrapper
-───────────────────────────────────────────────────────────── */
+------------------------------------------------------------- */
 function Reveal({
   children,
   delay = 0,
@@ -361,9 +361,9 @@ function Reveal({
   );
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------
    Animated counter
-───────────────────────────────────────────────────────────── */
+------------------------------------------------------------- */
 function StatCounter({
   value,
   suffix,
@@ -412,9 +412,9 @@ function StatCounter({
   );
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------
    Animated Dashboard Mockup
-───────────────────────────────────────────────────────────── */
+------------------------------------------------------------- */
 const MOCK_CASES = [
   { id: "SYN-0041", region: "Hippocampus",    risk: "High",   lat: "0.41 s", conf: "91%" },
   { id: "SYN-0040", region: "Entorhinal",     risk: "Medium", lat: "0.38 s", conf: "76%" },
@@ -481,7 +481,7 @@ function DashboardMockup() {
           <div className="flex items-center gap-2 border-b border-white/[0.07] bg-black/20 px-4 py-2">
             <div className="flex flex-1 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] text-white/30">
               <Activity className="h-3 w-3" />
-              Search cases…
+              Search cases---
             </div>
             <div className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-2 py-1.5 text-[9px] text-emerald-300">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
@@ -549,7 +549,7 @@ function DashboardMockup() {
                       : "bg-cyan-400/15 text-cyan-300")
                   }>
                     {row.risk}
-                    {phase === "alert" && row.risk === "High" && " ⚠"}
+                    {phase === "alert" && row.risk === "High" && " ---"}
                   </span>
                   <span className="text-white/45">{row.lat}</span>
                   <span className="text-white/45">{row.conf}</span>
@@ -560,12 +560,12 @@ function DashboardMockup() {
             {/* status bar */}
             <div className="mt-2 flex items-center justify-between text-[9px] text-white/25">
               <span>
-                {phase === "loading" && "Loading data…"}
-                {phase === "ready" && "28 cases processed · Last sync: just now"}
-                {phase === "alert" && "⚠ High-risk case detected · Review recommended"}
+                {phase === "loading" && "Loading data---"}
+                {phase === "ready" && "28 cases processed -- Last sync: just now"}
+                {phase === "alert" && "--- High-risk case detected -- Review recommended"}
               </span>
               <span className={`transition-colors duration-500 ${phase === "alert" ? "text-red-400" : "text-emerald-400"}`}>
-                {phase === "loading" ? "Syncing…" : "Live"}
+                {phase === "loading" ? "Syncing---" : "Live"}
               </span>
             </div>
           </div>
@@ -575,9 +575,9 @@ function DashboardMockup() {
   );
 }
 
-/* ─────────────────────────────────────────────────────────────
-   How It Works — 3 visual steps
-───────────────────────────────────────────────────────────── */
+/* -------------------------------------------------------------
+   How It Works --- 3 visual steps
+------------------------------------------------------------- */
 function HowItWorks() {
   const steps = [
     {
@@ -606,7 +606,7 @@ function HowItWorks() {
       num: "03",
       icon: FileText,
       title: "Clinical Report",
-      desc: "Grad-CAM heatmaps, SHAP attribution, and a plain-language risk summary — ready to export to PDF or share with a specialist.",
+      desc: "Grad-CAM heatmaps, SHAP attribution, and a plain-language risk summary --- ready to export to PDF or share with a specialist.",
       color: "text-emerald-400",
       bg: "bg-emerald-500/10",
       border: "border-emerald-500/20",
@@ -626,7 +626,7 @@ function HowItWorks() {
             Three steps. Under 500 ms.
           </h2>
           <p className="mt-4 text-white/50">
-            From raw scan to actionable clinical insight — no manual configuration required.
+            From raw scan to actionable clinical insight --- no manual configuration required.
           </p>
         </Reveal>
 
@@ -666,9 +666,9 @@ function HowItWorks() {
   );
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------
    Landing Page
-───────────────────────────────────────────────────────────── */
+------------------------------------------------------------- */
 export default function LandingPage() {
   usePageTitle("Synapse.PL");
   const router = useRouter();
@@ -682,7 +682,7 @@ export default function LandingPage() {
     return () => clearTimeout(t);
   }, []);
 
-  /* Navigate to dashboard — always set the tour flag so the auto-tour
+  /* Navigate to dashboard --- always set the tour flag so the auto-tour
      fires every time the user enters from the landing page.
      The sessionStorage key is consumed (removed) the moment the dashboard
      reads it, so navigating around inside the app never re-triggers it. */
@@ -696,7 +696,7 @@ export default function LandingPage() {
   return (
     <div className={`relative min-h-screen overflow-x-hidden font-sans ${dark ? "text-white" : "text-[#0f0e1a]"}`}>
 
-      {/* ── Navbar ───────────────────────────────────────────── */}
+      {/* -- Navbar --------------------------------------------- */}
       <nav className="fixed top-0 z-50 w-full border-b border-white/[0.07] bg-black/30 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2">
@@ -726,7 +726,7 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* ── Hero ─────────────────────────────────────────────── */}
+      {/* -- Hero ----------------------------------------------- */}
       <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden pt-16">
         {/* Interactive 3-D canvas */}
         <div className="absolute inset-0 z-0">
@@ -748,7 +748,7 @@ export default function LandingPage() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
               </span>
-              FPGA-Accelerated · Live Inference
+              FPGA-Accelerated -- Live Inference
             </span>
           </motion.div>
 
@@ -774,7 +774,7 @@ export default function LandingPage() {
             Upload a raw MRI scan. Get a{" "}
             <span className="text-white/85">per-region risk score</span>,{" "}
             <span className="text-white/85">Grad-CAM heatmap</span>, and{" "}
-            <span className="text-white/85">physician-ready PDF</span> —
+            <span className="text-white/85">physician-ready PDF</span> ---
             FPGA-processed at the edge in{" "}
             <span className="text-emerald-400">under 500 ms</span>.
           </motion.p>
@@ -802,7 +802,7 @@ export default function LandingPage() {
           </motion.div>
         </div>
 
-        {/* Drag-to-rotate hint — fades out after 3.5 s */}
+        {/* Drag-to-rotate hint --- fades out after 3.5 s */}
         <AnimatePresence>
           {showDragHint && (
             <motion.div
@@ -835,7 +835,7 @@ export default function LandingPage() {
         </motion.div>
       </section>
 
-      {/* ── Stats strip ──────────────────────────────────────── */}
+      {/* -- Stats strip ---------------------------------------- */}
       <section className="relative z-10 border-y border-white/[0.06] bg-black/20 backdrop-blur-sm">
         <div className="mx-auto grid max-w-5xl grid-cols-2 gap-10 px-8 py-16 sm:grid-cols-4">
           <StatCounter value={94}   suffix="%" label="Diagnostic Accuracy"  delay={0}    />
@@ -845,7 +845,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Animated demo ────────────────────────────────────── */}
+      {/* -- Animated demo -------------------------------------- */}
       <section className="relative z-10 py-24">
         <div className="mx-auto max-w-5xl px-6">
           <Reveal className="mb-10 text-center">
@@ -863,10 +863,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── How it works ─────────────────────────────────────── */}
+      {/* -- How it works --------------------------------------- */}
       <HowItWorks />
 
-      {/* ── Features ─────────────────────────────────────────── */}
+      {/* -- Features ------------------------------------------- */}
       <section id="features" className="relative z-10 py-28">
         <div className="mx-auto max-w-7xl px-6">
           <Reveal className="mb-16 text-center">
@@ -874,7 +874,7 @@ export default function LandingPage() {
               Built for Clinical Precision
             </h2>
             <p className="mt-4 text-white/50">
-              Every layer of the pipeline — from scan to report — is engineered
+              Every layer of the pipeline --- from scan to report --- is engineered
               for speed and interpretability.
             </p>
           </Reveal>
@@ -923,7 +923,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Pipeline ─────────────────────────────────────────── */}
+      {/* -- Pipeline ------------------------------------------- */}
       <section className="relative z-10 py-24">
         <div className="mx-auto max-w-5xl px-6">
           <Reveal className="mb-16 text-center">
@@ -959,7 +959,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── CTA ──────────────────────────────────────────────── */}
+      {/* -- CTA ------------------------------------------------ */}
       <section className="relative z-10 py-32">
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="h-[420px] w-[600px] rounded-full bg-purple-600/10 blur-[100px]" />
@@ -972,7 +972,7 @@ export default function LandingPage() {
             your diagnostics?
           </h2>
           <p className="mt-6 text-lg text-white/50">
-            Open the dashboard to analyse your first case — no setup required.
+            Open the dashboard to analyse your first case --- no setup required.
           </p>
 
           <button
@@ -985,9 +985,9 @@ export default function LandingPage() {
         </Reveal>
       </section>
 
-      {/* ── Footer ───────────────────────────────────────────── */}
+      {/* -- Footer --------------------------------------------- */}
       <footer className="relative z-10 border-t border-white/[0.06] py-8 text-center text-xs text-white/25">
-        © {new Date().getFullYear()} Synapse.PL · Hybrid AI + Clinical Diagnostic System
+        -- {new Date().getFullYear()} Synapse.PL -- Hybrid AI + Clinical Diagnostic System
       </footer>
     </div>
   );

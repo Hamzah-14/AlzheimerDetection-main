@@ -7,6 +7,7 @@ import { usePageTitle } from "@/lib/use-page-title";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { DASHBOARD_CASES, HEATMAP_CASES, type DashboardCase, type HeatmapCase } from "@/lib/cases";
+import { useAnalysisStore } from "@/lib/analysis-store";
 import {
   Brain,
   Activity,
@@ -151,11 +152,11 @@ const StatCard = memo(function StatCard({
           <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
             <div className="h-2 w-16 animate-pulse rounded-full bg-white/10" />
             <div className="mt-3 flex items-end gap-1">
-              {Array.from({ length: 7 }).map((_, i) => (
+              {[28, 20, 36, 24, 32, 18, 30].map((h, i) => (
                 <div
                   key={i}
                   className="w-1.5 animate-pulse rounded-full bg-white/10"
-                  style={{ height: `${16 + Math.random() * 24}px` }}
+                  style={{ height: `${h}px` }}
                 />
               ))}
             </div>
@@ -245,7 +246,7 @@ const MiniHoverPreviewMRI = memo(function MiniHoverPreviewMRI({
   );
 });
 
-/* ── Risk Stratification Heatmap ─────────────────────────────────────────── */
+/* -- Risk Stratification Heatmap ------------------------------------------- */
 const REGIONS = ["Hippocampus", "Entorhinal", "Temporal", "Prefrontal", "Parietal", "Frontal"] as const;
 
 const RISK_DOT: Record<string, { fill: string; ring: string; label: string }> = {
@@ -287,7 +288,7 @@ function RiskHeatmap({ cases }: { cases: HeatmapCase[] }) {
           {(["High","Medium","Low"] as const).map(r => (
             <span key={r} className={`flex items-center gap-1.5 ${RISK_DOT[r].label}`}>
               <span className={`inline-block h-2 w-2 rounded-full ${RISK_DOT[r].fill}`} />
-              {r} · {counts[r]}
+              {r} -- {counts[r]}
             </span>
           ))}
         </div>
@@ -295,26 +296,26 @@ function RiskHeatmap({ cases }: { cases: HeatmapCase[] }) {
 
       <CardContent>
         <div ref={containerRef} className="relative select-none">
-          {/* ── background risk zones ── */}
+          {/* -- background risk zones -- */}
           <div className="pointer-events-none absolute inset-x-10 bottom-6 top-0 overflow-hidden rounded-xl">
             <div className="absolute inset-x-0 top-0 h-[28%] bg-gradient-to-b from-red-500/10 to-transparent" />
             <div className="absolute inset-x-0 top-[28%] h-[30%] bg-gradient-to-b from-amber-500/6 to-transparent" />
             <div className="absolute bottom-0 inset-x-0 h-[42%] bg-gradient-to-t from-cyan-500/8 to-transparent" />
           </div>
 
-          {/* ── threshold lines ── */}
+          {/* -- threshold lines -- */}
           <div className="pointer-events-none absolute inset-x-10 bottom-6 top-0">
             {/* High / Medium boundary at 68% */}
             <div className="absolute inset-x-0 border-t border-dashed border-red-400/20" style={{ top: "32%" }}>
-              <span className="absolute -top-3 right-0 text-[9px] text-red-400/50">High risk ≥ 68%</span>
+              <span className="absolute -top-3 right-0 text-[9px] text-red-400/50">High risk --- 68%</span>
             </div>
             {/* Medium / Low boundary at 45% */}
             <div className="absolute inset-x-0 border-t border-dashed border-amber-400/20" style={{ top: "55%" }}>
-              <span className="absolute -top-3 right-0 text-[9px] text-amber-400/50">Med ≥ 45%</span>
+              <span className="absolute -top-3 right-0 text-[9px] text-amber-400/50">Med --- 45%</span>
             </div>
           </div>
 
-          {/* ── plot area ── */}
+          {/* -- plot area -- */}
           <div className="relative h-52 pl-10 pb-6">
             {/* Y-axis labels */}
             <div className="pointer-events-none absolute left-0 top-0 flex h-full flex-col justify-between pb-1 text-[9px] text-white/30">
@@ -353,7 +354,7 @@ function RiskHeatmap({ cases }: { cases: HeatmapCase[] }) {
             </div>
           </div>
 
-          {/* ── hover tooltip ── */}
+          {/* -- hover tooltip -- */}
           {hovered && (
             <div
               data-heatmap-tooltip
@@ -391,7 +392,7 @@ function RiskHeatmap({ cases }: { cases: HeatmapCase[] }) {
         </div>
 
         <p className="mt-2 text-[11px] text-white/35">
-          Each dot is one case. Y = AI confidence · X = brain region. Hover to inspect.
+          Each dot is one case. Y = AI confidence -- X = brain region. Hover to inspect.
         </p>
       </CardContent>
     </Card>
@@ -408,16 +409,16 @@ export default function DashboardPage() {
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const unmountPreviewRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /* ── One-time tour auto-start when coming from the landing page ──
+  /* -- One-time tour auto-start when coming from the landing page --
    *  Strict Mode runs effects twice; the flag is consumed on the first
    *  invocation so the second invocation is always a no-op.
-   *  No cleanup is returned intentionally — see onboarding-tour.tsx note.
-   * ─────────────────────────────────────────────────────────────── */
+   *  No cleanup is returned intentionally --- see onboarding-tour.tsx note.
+   * --------------------------------------------------------------- */
   useEffect(() => {
     try {
       const pending = sessionStorage.getItem(PENDING_KEY);
       if (!pending) return;
-      sessionStorage.removeItem(PENDING_KEY); // consume — Strict Mode run-2 sees null → no-op
+      sessionStorage.removeItem(PENDING_KEY); // consume --- Strict Mode run-2 sees null --- no-op
     } catch {
       return;
     }
@@ -426,9 +427,35 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // [] = once on mount; start() is a stable Zustand ref
 
-  const cases: CaseRow[] = useMemo(() => DASHBOARD_CASES, []);
+  const storeCases = useAnalysisStore((s) => s.cases);
 
-  /* ── Throughput chart ─────────────────────────────────────────── */
+  // Convert real pipeline results to DashboardCase shape, prepend to static demo cases
+  const realCases: DashboardCase[] = useMemo(() => storeCases.map((c) => {
+    const pred = c.result.final.prediction;
+    const conf = c.result.final.confidence;
+    return {
+      id:             c.id,
+      region:         c.region,
+      risk:           c.risk,
+      lat:            "~3.2s",
+      status:         "Complete",
+      confidence:     `${(conf * 100).toFixed(1)}%`,
+      feature:        pred.includes("Alzheimer") ? "High AD texture signal" : pred.includes("MCI") ? "Asymmetric hippocampal texture" : "Normal texture pattern",
+      note:           pred,
+      recommendation: pred.includes("Alzheimer") ? "Refer to specialist" : pred.includes("MCI") ? "Monitor closely" : "Routine follow-up",
+    };
+  }), [storeCases]);
+
+  const cases: CaseRow[] = useMemo(
+    () => [...realCases, ...DASHBOARD_CASES],
+    [realCases]
+  );
+
+  const totalProcessed = realCases.length + 28; // 28 = demo baseline
+  const highRisk       = realCases.filter(c => c.risk === "High").length + 6;
+  const inQueue        = Math.max(0, 3 - realCases.length);
+
+  /* -- Throughput chart ------------------------------------------- */
   const throughput = [10, 12, 14, 13, 16, 18, 28];
   const maxThroughput = Math.max(...throughput);
   const dayLabels = useMemo(() => {
@@ -516,7 +543,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex h-[calc(100vh-88px)] flex-col overflow-y-auto p-6 pb-6">
-      {/* ── Hero ──────────────────────────────────────────────── */}
+      {/* -- Hero ------------------------------------------------ */}
       <div className="mb-6 flex flex-col gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
@@ -525,7 +552,7 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* ── Quick Actions ──────────────────────────────────── */}
+        {/* -- Quick Actions ------------------------------------ */}
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => router.push("/upload")}
@@ -561,11 +588,11 @@ export default function DashboardPage() {
       <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="Cases processed (7d)"
-          numericValue={28}
+          numericValue={totalProcessed}
           sub="vs last week"
           trend={12}
           icon={Activity}
-          spark={[10, 12, 14, 13, 16, 18, 28]}
+          spark={[10, 12, 14, 13, 16, 18, totalProcessed]}
           tint="purple"
           loading={!cardsLoaded}
         />
@@ -583,7 +610,7 @@ export default function DashboardPage() {
         />
         <StatCard
           title="High-risk flagged"
-          numericValue={6}
+          numericValue={highRisk}
           sub="Needs clinician review"
           trend={50}
           icon={Brain}
@@ -593,8 +620,8 @@ export default function DashboardPage() {
         />
         <StatCard
           title="Scans in queue"
-          numericValue={3}
-          sub="Upload → preprocess → infer"
+          numericValue={inQueue}
+          sub="Upload --- preprocess --- infer"
           trend={-25}
           icon={Scan}
           spark={[6, 5, 5, 4, 4, 3, 3]}
@@ -613,6 +640,12 @@ export default function DashboardPage() {
           </CardHeader>
 
           <CardContent className="flex flex-col">
+            {storeCases.length === 0 && (
+              <div className="mb-3 flex items-center justify-between rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-2.5 text-xs text-white/45">
+                No real cases yet --- demo data shown below
+                <a href="/upload" className="text-purple-400 hover:text-purple-300 transition">Upload a case ---</a>
+              </div>
+            )}
             <div
               className="overflow-hidden rounded-2xl border border-white/10"
               onMouseLeave={scheduleHide}
@@ -678,7 +711,7 @@ export default function DashboardPage() {
           </CardHeader>
 
           <CardContent className="space-y-3 pb-4">
-            {/* ── Throughput chart ────────────────────────────────── */}
+            {/* -- Throughput chart ---------------------------------- */}
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="mb-3 flex items-center justify-between text-xs text-white/50">
                 <span>Weekly Throughput</span>
@@ -705,17 +738,17 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* ── Model info ──────────────────────────────────────── */}
+            {/* -- Model info ---------------------------------------- */}
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="flex items-center gap-2 text-sm text-white/70">
                 <Cpu className="h-4 w-4 text-white/50" />
                 Pipeline
               </div>
               <div className="mt-1 font-semibold">
-                3D GLCM → Radiomics → Classifier
+                3D GLCM --- Radiomics --- Classifier
               </div>
               <div className="mt-1 text-xs text-white/55">
-                Contrast · Energy · Homogeneity (13-dir)
+                Contrast -- Energy -- Homogeneity (13-dir)
               </div>
             </div>
 
@@ -724,7 +757,7 @@ export default function DashboardPage() {
                 <Zap className="h-4 w-4 text-white/50" />
                 Deployment
               </div>
-              <div className="mt-1 font-semibold">Edge-ready · PYNQ-Z2</div>
+              <div className="mt-1 font-semibold">Edge-ready -- PYNQ-Z2</div>
               <div className="mt-1 text-xs text-white/55">
                 Heatmap + Feature Attribution overlays
               </div>
@@ -733,7 +766,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* ── Risk Stratification Heatmap ─────────────────────── */}
+      {/* -- Risk Stratification Heatmap ----------------------- */}
       <div className="mt-4 pb-6">
         <RiskHeatmap cases={HEATMAP_CASES} />
       </div>

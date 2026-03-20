@@ -160,7 +160,7 @@ export default function AnalyticsPage() {
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs text-white/70">
-          Deployment: <span className="text-white/90">PYNQ-Z2</span> • Mode:{" "}
+          Deployment: <span className="text-white/90">PYNQ-Z2</span> --- Mode:{" "}
           <span className="text-white/90">Edge inference</span>
         </div>
       </div>
@@ -283,7 +283,7 @@ export default function AnalyticsPage() {
             <div className="text-xs text-white/50">Cases processed today</div>
             <div className="mt-1 text-2xl font-semibold text-white">28</div>
             <div className="mt-2 text-xs text-emerald-300/80">
-              ↑ 12% vs yesterday
+              --- 12% vs yesterday
             </div>
           </div>
 
@@ -620,7 +620,7 @@ export default function AnalyticsPage() {
                   {thermalRisk}
                 </div>
                 <p className="mt-1.5 text-xs leading-5 text-white/60">
-                  Board temp currently {boardTemp}°C.
+                  Board temp currently {boardTemp}--C.
                 </p>
               </div>
 
@@ -686,7 +686,7 @@ export default function AnalyticsPage() {
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="text-xs text-white/50">Board temp</div>
                   <div className="mt-1 text-lg font-semibold text-white">
-                    {boardTemp}°C
+                    {boardTemp}--C
                   </div>
                 </div>
 

@@ -478,8 +478,6 @@ def main():
 
         temporal_feats, temporal_names = compute_temporal_features(all_features, dates, names)
     
-
-
         results = run_cascade(
             all_features[-1], names,        # most recent scan for task1/task3
             temporal_feats,   temporal_names,
@@ -488,7 +486,6 @@ def main():
         )
 
         print(results["final"])
- 
  
 if __name__ == "__main__":
     main()

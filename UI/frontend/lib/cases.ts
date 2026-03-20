@@ -1,18 +1,18 @@
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 // lib/cases.ts
 // Single source of truth for all case data across the platform.
 // Every page (Dashboard, Viewer, Explain, Reports, Timeline) imports from here.
 // To add a new case: add one entry in each of the five data records below.
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 
-// ── Shared types ──────────────────────────────────────────────────────────────
+// -- Shared types --------------------------------------------------------------
 
 export type DatasetClass = "AD" | "MCI" | "NC";
 export type Plane = "Axial" | "Coronal" | "Sagittal";
 export type TimelineStatus = "Complete" | "Active" | "Pending";
 export type RiskLevel = "High" | "Medium" | "Low";
 
-// ── Feature types (each page uses a slightly different shape) ─────────────────
+// -- Feature types (each page uses a slightly different shape) -----------------
 
 export type ViewerFeature = {
   name: string;
@@ -35,7 +35,7 @@ export type ReportFeature = {
   note: string;
 };
 
-// ── Page-specific case types ───────────────────────────────────────────────────
+// -- Page-specific case types ---------------------------------------------------
 
 export type DashboardCase = {
   id: string;
@@ -66,6 +66,7 @@ export type ViewerCase = {
 };
 
 export type ExplainCase = {
+  datasetClass: DatasetClass;
   region: string;
   confidence: number;
   decision: string;
@@ -84,6 +85,7 @@ export type ReportCase = {
   status: string;
   latency: string;
   summary: string;
+  ai_narrative?: string;
   notes: string;
   recommendation: string;
   explainability: string;
@@ -98,6 +100,7 @@ export type TimelineEvent = {
   status: TimelineStatus;
   description: string;
   icon: "upload" | "preprocess" | "radiomics" | "classify" | "report" | "review";
+  plain?: string;
 };
 
 export type TimelineCase = {
@@ -111,11 +114,11 @@ export type TimelineCase = {
   events: TimelineEvent[];
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 // DATA
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 
-// ── Dashboard cases (table rows + hover preview) ──────────────────────────────
+// -- Dashboard cases (table rows + hover preview) ------------------------------
 
 export const DASHBOARD_CASES: DashboardCase[] = [
   {
@@ -164,7 +167,7 @@ export const DASHBOARD_CASES: DashboardCase[] = [
   },
 ];
 
-// ── Viewer page data ───────────────────────────────────────────────────────────
+// -- Viewer page data -----------------------------------------------------------
 
 export const VIEWER_DATA: Record<string, ViewerCase> = {
   "AUD-0231": {
@@ -261,10 +264,11 @@ export const VIEWER_DATA: Record<string, ViewerCase> = {
   },
 };
 
-// ── Explainable AI page data ───────────────────────────────────────────────────
+// -- Explainable AI page data ---------------------------------------------------
 
 export const EXPLAIN_DATA: Record<string, ExplainCase> = {
   "AUD-0231": {
+    datasetClass: "AD",
     region: "Hippocampus",
     confidence: 0.78,
     decision: "High-risk pattern detected",
@@ -310,6 +314,7 @@ export const EXPLAIN_DATA: Record<string, ExplainCase> = {
     ],
   },
   "AUD-0230": {
+    datasetClass: "MCI",
     region: "Hippocampus",
     confidence: 0.63,
     decision: "Moderate risk indication",
@@ -355,6 +360,7 @@ export const EXPLAIN_DATA: Record<string, ExplainCase> = {
     ],
   },
   "AUD-0229": {
+    datasetClass: "NC",
     region: "Temporal",
     confidence: 0.34,
     decision: "Low-risk pattern",
@@ -400,6 +406,7 @@ export const EXPLAIN_DATA: Record<string, ExplainCase> = {
     ],
   },
   "AUD-0228": {
+    datasetClass: "AD",
     region: "Hippocampus",
     confidence: 0.72,
     decision: "High-risk case pending review",
@@ -446,7 +453,7 @@ export const EXPLAIN_DATA: Record<string, ExplainCase> = {
   },
 };
 
-// ── Reports page data ──────────────────────────────────────────────────────────
+// -- Reports page data ----------------------------------------------------------
 
 export const REPORT_DATA: Record<string, ReportCase> = {
   "AUD-0231": {
@@ -466,7 +473,7 @@ export const REPORT_DATA: Record<string, ReportCase> = {
       "Feature attribution indicates Contrast as the strongest contributor, followed by Homogeneity and Energy. Saliency remains localized near the central hippocampal structure in both channels.",
     preprocessing:
       "Raw .bin scan converted to NumPy volume and normalized into bilateral hippocampal crops.",
-    volumeShape: "2 × 64 × 64 × 64",
+    volumeShape: "2 -- 64 -- 64 -- 64",
     features: [
       { name: "Contrast", value: 0.82, color: "bg-red-400", note: "Primary driver of the classification outcome." },
       { name: "Homogeneity", value: 0.61, color: "bg-purple-400", note: "Reduced structural uniformity supports abnormal texture interpretation." },
@@ -491,7 +498,7 @@ export const REPORT_DATA: Record<string, ReportCase> = {
       "Feature attribution indicates Contrast and Homogeneity as the leading contributors. The saliency footprint is present but more diffuse than in reviewed high-risk cases.",
     preprocessing:
       "Raw .bin scan converted to NumPy volume and standardized into bilateral hippocampal crops.",
-    volumeShape: "2 × 64 × 64 × 64",
+    volumeShape: "2 -- 64 -- 64 -- 64",
     features: [
       { name: "Contrast", value: 0.68, color: "bg-red-400", note: "Leading discriminative feature for this case." },
       { name: "Homogeneity", value: 0.54, color: "bg-purple-400", note: "Supports moderate texture abnormality." },
@@ -516,7 +523,7 @@ export const REPORT_DATA: Record<string, ReportCase> = {
       "Low contrast contribution and relatively preserved homogeneity reduce the probability of a high-risk classification. Saliency remains weak and diffuse.",
     preprocessing:
       "Raw .bin scan converted to NumPy volume and normalized into bilateral hippocampal crops.",
-    volumeShape: "2 × 64 × 64 × 64",
+    volumeShape: "2 -- 64 -- 64 -- 64",
     features: [
       { name: "Contrast", value: 0.41, color: "bg-red-400", note: "Low discriminative strength relative to flagged cases." },
       { name: "Homogeneity", value: 0.36, color: "bg-purple-400", note: "Closer to normal structural consistency." },
@@ -541,7 +548,7 @@ export const REPORT_DATA: Record<string, ReportCase> = {
       "Contrast remains the dominant driver, supported by reduced Homogeneity and moderate Energy contribution. Saliency appears compact and centered in the hippocampal region.",
     preprocessing:
       "Raw .bin scan converted to NumPy volume and cropped into left/right hippocampal sub-volumes.",
-    volumeShape: "2 × 64 × 64 × 64",
+    volumeShape: "2 -- 64 -- 64 -- 64",
     features: [
       { name: "Contrast", value: 0.79, color: "bg-red-400", note: "Dominant feature associated with high-risk deviation." },
       { name: "Homogeneity", value: 0.59, color: "bg-purple-400", note: "Supports irregular structural interpretation." },
@@ -551,49 +558,49 @@ export const REPORT_DATA: Record<string, ReportCase> = {
   },
 };
 
-// ── Risk Stratification Heatmap data ──────────────────────────────────────────
+// -- Risk Stratification Heatmap data ------------------------------------------
 
 export type HeatmapCase = {
   id: string;
   region: "Hippocampus" | "Entorhinal" | "Temporal" | "Prefrontal" | "Parietal" | "Frontal";
-  confidence: number;  // 0–1
+  confidence: number;  // 0---1
   risk: RiskLevel;
   feature: string;
   latency: string;
 };
 
 export const HEATMAP_CASES: HeatmapCase[] = [
-  // Hippocampus — dense cluster, mostly high risk
+  // Hippocampus --- dense cluster, mostly high risk
   { id: "AUD-0231", region: "Hippocampus",  confidence: 0.78, risk: "High",   feature: "Contrast",     latency: "0.38s" },
   { id: "AUD-0228", region: "Hippocampus",  confidence: 0.72, risk: "High",   feature: "Contrast",     latency: "0.39s" },
   { id: "AUD-0230", region: "Hippocampus",  confidence: 0.63, risk: "Medium", feature: "Homogeneity",  latency: "0.41s" },
   { id: "AUD-0227", region: "Hippocampus",  confidence: 0.81, risk: "High",   feature: "Contrast",     latency: "0.37s" },
   { id: "AUD-0224", region: "Hippocampus",  confidence: 0.55, risk: "Medium", feature: "Energy",       latency: "0.43s" },
   { id: "AUD-0221", region: "Hippocampus",  confidence: 0.29, risk: "Low",    feature: "Correlation",  latency: "0.46s" },
-  // Entorhinal — moderate spread
+  // Entorhinal --- moderate spread
   { id: "AUD-0226", region: "Entorhinal",   confidence: 0.74, risk: "High",   feature: "Contrast",     latency: "0.40s" },
   { id: "AUD-0223", region: "Entorhinal",   confidence: 0.58, risk: "Medium", feature: "Homogeneity",  latency: "0.44s" },
   { id: "AUD-0220", region: "Entorhinal",   confidence: 0.42, risk: "Medium", feature: "Energy",       latency: "0.47s" },
   { id: "AUD-0217", region: "Entorhinal",   confidence: 0.22, risk: "Low",    feature: "Correlation",  latency: "0.49s" },
-  // Temporal — mixed
+  // Temporal --- mixed
   { id: "AUD-0229", region: "Temporal",     confidence: 0.34, risk: "Low",    feature: "Correlation",  latency: "0.45s" },
   { id: "AUD-0225", region: "Temporal",     confidence: 0.61, risk: "Medium", feature: "Homogeneity",  latency: "0.42s" },
   { id: "AUD-0219", region: "Temporal",     confidence: 0.77, risk: "High",   feature: "Contrast",     latency: "0.38s" },
   { id: "AUD-0215", region: "Temporal",     confidence: 0.18, risk: "Low",    feature: "Correlation",  latency: "0.51s" },
-  // Prefrontal — lower risk overall
+  // Prefrontal --- lower risk overall
   { id: "AUD-0222", region: "Prefrontal",   confidence: 0.48, risk: "Medium", feature: "Energy",       latency: "0.45s" },
   { id: "AUD-0218", region: "Prefrontal",   confidence: 0.31, risk: "Low",    feature: "Homogeneity",  latency: "0.48s" },
   { id: "AUD-0214", region: "Prefrontal",   confidence: 0.67, risk: "High",   feature: "Contrast",     latency: "0.41s" },
   // Parietal
   { id: "AUD-0216", region: "Parietal",     confidence: 0.53, risk: "Medium", feature: "Energy",       latency: "0.44s" },
   { id: "AUD-0213", region: "Parietal",     confidence: 0.25, risk: "Low",    feature: "Correlation",  latency: "0.50s" },
-  // Frontal — mostly low risk
+  // Frontal --- mostly low risk
   { id: "AUD-0212", region: "Frontal",      confidence: 0.19, risk: "Low",    feature: "Homogeneity",  latency: "0.52s" },
   { id: "AUD-0211", region: "Frontal",      confidence: 0.38, risk: "Low",    feature: "Energy",       latency: "0.47s" },
   { id: "AUD-0210", region: "Frontal",      confidence: 0.70, risk: "High",   feature: "Contrast",     latency: "0.40s" },
 ];
 
-// ── Timeline page data ─────────────────────────────────────────────────────────
+// -- Timeline page data ---------------------------------------------------------
 
 export const TIMELINE_DATA: Record<string, TimelineCase> = {
   "AUD-0231": {

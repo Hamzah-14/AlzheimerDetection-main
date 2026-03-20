@@ -2,12 +2,12 @@
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 
-// ── Page context map (keyed by actual Next.js route) ─────────────────────────
+// -- Page context map (keyed by actual Next.js route) -------------------------
 const PAGES: Record<string, { label: string; description: string }> = {
   "/": {
     label: "Home",
     description:
-      "The home page introduces Synapse.PL — an FPGA-accelerated Alzheimer's detection platform. It explains the system's core capability: upload a raw MRI scan and receive a per-region risk score, Grad-CAM heatmap, and physician-ready PDF in under 500 ms.",
+      "The home page introduces Synapse.PL --- an FPGA-accelerated Alzheimer's detection platform. It explains the system's core capability: upload a raw MRI scan and receive a per-region risk score, Grad-CAM heatmap, and physician-ready PDF in under 500 ms.",
   },
   "/dashboard": {
     label: "Dashboard",
@@ -42,7 +42,7 @@ const PAGES: Record<string, { label: string; description: string }> = {
   "/reports": {
     label: "Reports",
     description:
-      "The Reports page displays the full clinical report for a selected case — GLCM radiomic feature table, asymmetry scores, Grad-CAM findings, and recommended action. A physician-ready PDF can be exported directly from this page.",
+      "The Reports page displays the full clinical report for a selected case --- GLCM radiomic feature table, asymmetry scores, Grad-CAM findings, and recommended action. A physician-ready PDF can be exported directly from this page.",
   },
   "/settings": {
     label: "Settings",
@@ -52,7 +52,7 @@ const PAGES: Record<string, { label: string; description: string }> = {
   "/about": {
     label: "About",
     description:
-      "The About page introduces the team behind Synapse.PL — four final-year engineering students: Vikram (FPGA hardware and web platform), Hamzah (ML and data pipeline), Ahmed (software integration), and Abderahman (software development). It also covers the project mission, the full tech stack from FPGA to browser, and a note that all patient data is synthetic.",
+      "The About page introduces the team behind Synapse.PL --- four final-year engineering students: Vikram (FPGA hardware and web platform), Hamzah (ML and data pipeline), Ahmed (software integration), and Abderahman (software development). It also covers the project mission, the full tech stack from FPGA to browser, and a note that all patient data is synthetic.",
   },
 };
 
@@ -64,11 +64,11 @@ function getPageKey(pathname: string) {
   return match ?? "/";
 }
 
-// ── System prompts ────────────────────────────────────────────────────────────
+// -- System prompts ------------------------------------------------------------
 const TEAM_INFO = `Synapse.PL was built by a team of four final-year engineering students: Vikram, who designed the FPGA hardware pipeline on the PYNQ-Z2 and built the web platform; Hamzah, who handled the machine learning models and data pipeline; Ahmed, who led the software integration; and Abderahman, who contributed to the software development side of the project. If asked who built this, mention all four by name and their roles, and suggest the user visit the About page for more details.`;
 
 const BASE_PROMPTS: Record<string, string> = {
-  clinician: `You are NeuroAssist, an AI guide for Synapse.PL — an FPGA-accelerated Alzheimer's detection platform. You are speaking with a clinician or researcher. Be concise and technically precise. Keep answers to 2-4 sentences unless more detail is explicitly requested. Use proper medical and engineering terminology. You know about: GLCM features (energy, entropy, contrast, homogeneity, correlation, dissimilarity), the FPGA pipeline on PYNQ-Z2 Zynq-7020, hippocampal texture asymmetry as an AD biomarker, Grad-CAM heatmap interpretation, multi-scale analysis at d=1/2/4, block partitioning (2x2x2 sub-blocks of 32 cubed), and classification into AD/MCI/NC. If asked what is happening on this page, explain it technically. If asked something unrelated, politely redirect. ${TEAM_INFO}`,
+  clinician: `You are NeuroAssist, an AI guide for Synapse.PL --- an FPGA-accelerated Alzheimer's detection platform. You are speaking with a clinician or researcher. Be concise and technically precise. Keep answers to 2-4 sentences unless more detail is explicitly requested. Use proper medical and engineering terminology. You know about: GLCM features (energy, entropy, contrast, homogeneity, correlation, dissimilarity), the FPGA pipeline on PYNQ-Z2 Zynq-7020, hippocampal texture asymmetry as an AD biomarker, Grad-CAM heatmap interpretation, multi-scale analysis at d=1/2/4, block partitioning (2x2x2 sub-blocks of 32 cubed), and classification into AD/MCI/NC. If asked what is happening on this page, explain it technically. If asked something unrelated, politely redirect. ${TEAM_INFO}`,
   patient: `You are NeuroAssist, a friendly AI guide for Synapse.PL, an Alzheimer's detection system. You are speaking with a patient or general user. Use plain warm everyday language, no jargon. Keep answers to 2-3 sentences. Use simple analogies where helpful. You can explain what each page shows, what results mean, and always remind users that results should be discussed with a doctor. If asked what is happening on this page, explain it simply. Always be warm and reassuring. If asked something unrelated, politely redirect. ${TEAM_INFO}`,
 };
 
@@ -79,7 +79,7 @@ SUGGESTIONS:
 - [suggestion 3]
 These should be 3 short natural follow-up questions based on what you just answered and the current page. Never repeat a question already asked in this conversation.`;
 
-// ── Per-page initial suggestion chips ────────────────────────────────────────
+// -- Per-page initial suggestion chips ----------------------------------------
 const INITIAL_SUGGESTIONS: Record<string, Record<string, string[]>> = {
   clinician: {
     "/":          ["How does the FPGA pipeline work?", "What GLCM features are extracted?", "Who built this?", "What is the classification pipeline?"],
@@ -107,7 +107,7 @@ const INITIAL_SUGGESTIONS: Record<string, Record<string, string[]>> = {
   },
 };
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// -- Helpers -------------------------------------------------------------------
 function parseSuggestions(text: string) {
   const match = text.match(/SUGGESTIONS:\s*([\s\S]*)$/);
   if (!match) return { clean: text, suggestions: [] as string[] };
@@ -124,7 +124,7 @@ function formatTime(date: Date) {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-// ── SVG icons ─────────────────────────────────────────────────────────────────
+// -- SVG icons -----------------------------------------------------------------
 function ChatIcon({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 26 26" fill="none">
@@ -166,7 +166,7 @@ function ThumbIcon({ up }: { up: boolean }) {
   );
 }
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// -- Types ---------------------------------------------------------------------
 type UserType = "clinician" | "patient";
 type ChatState = "closed" | "open" | "minimized";
 
@@ -179,7 +179,7 @@ interface Message {
   time: Date;
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
+// -- Component -----------------------------------------------------------------
 export default function NeuroAssist() {
   const pathname = usePathname();
   const pageKey  = getPageKey(pathname);
@@ -230,7 +230,7 @@ export default function NeuroAssist() {
     prevPage.current = pageKey;
   }, [pageKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Chat actions ────────────────────────────────────────────────────────────
+  // -- Chat actions ------------------------------------------------------------
   function selectUserType(type: UserType) {
     setUserType(type);
     setMessages([]);
@@ -321,13 +321,13 @@ export default function NeuroAssist() {
     setLoading(false);
   }
 
-  // ── Derived values ──────────────────────────────────────────────────────────
+  // -- Derived values ----------------------------------------------------------
   const roleColor = userType === "clinician" ? "#7c3aed" : "#00c8b4";
   const lastAssistantMsg = [...messages].reverse().find((m) => m.role === "assistant" && !m.isSystem);
   const activeSuggestions = lastAssistantMsg?.suggestions?.filter((s) => !askedQuestions.has(s)) ?? null;
   const initialSuggestions = getInitialSuggestions();
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  // -- Render ------------------------------------------------------------------
   return (
     <>
       <style>{`
@@ -356,7 +356,7 @@ export default function NeuroAssist() {
         .na-role:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.4); }
       `}</style>
 
-      {/* ── MINIMIZED BAR ────────────────────────────────────────────────────── */}
+      {/* -- MINIMIZED BAR ------------------------------------------------------ */}
       {chatState === "minimized" && (
         <div
           className="na-min"
@@ -380,11 +380,11 @@ export default function NeuroAssist() {
           <button
             onClick={(e) => { e.stopPropagation(); setChatState("closed"); }}
             style={{ background:"none", border:"none", color:"rgba(255,255,255,.2)", cursor:"pointer", fontSize:"16px", padding:"0 2px", lineHeight:1 }}
-          >×</button>
+          >--</button>
         </div>
       )}
 
-      {/* ── FULL CHAT WINDOW ──────────────────────────────────────────────────── */}
+      {/* -- FULL CHAT WINDOW ---------------------------------------------------- */}
       {chatState === "open" && (
         <div
           className="na-win"
@@ -400,26 +400,26 @@ export default function NeuroAssist() {
               <div style={{ display:"flex", alignItems:"center", gap:"4px" }}>
                 <div style={{ width:"5px", height:"5px", borderRadius:"50%", background:userType ? roleColor : "#7c3aed", animation:"na-pulse 2s infinite", flexShrink:0 }} />
                 <span style={{ color:userType ? roleColor : "rgba(124,58,237,.75)", fontSize:"10px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                  {userType ? `${userType.toUpperCase()} · ${page.label.toUpperCase()}` : "ONLINE"}
+                  {userType ? `${userType.toUpperCase()} -- ${page.label.toUpperCase()}` : "ONLINE"}
                 </span>
               </div>
             </div>
             <div style={{ display:"flex", gap:"2px", flexShrink:0 }}>
               {userType && (
                 <>
-                  <button className="na-ibtn" onClick={clearChat} title="Clear chat" style={{ background:"none", border:"none", color:"rgba(255,255,255,.2)", cursor:"pointer", fontSize:"13px", padding:"4px 6px", borderRadius:"6px" }}>🗑</button>
-                  <button className="na-ibtn" onClick={resetChat} title="Switch role" style={{ background:"none", border:"none", color:"rgba(255,255,255,.2)", cursor:"pointer", fontSize:"15px", padding:"4px 6px", borderRadius:"6px" }}>↺</button>
+                  <button className="na-ibtn" onClick={clearChat} title="Clear chat" style={{ background:"none", border:"none", color:"rgba(255,255,255,.2)", cursor:"pointer", fontSize:"13px", padding:"4px 6px", borderRadius:"6px" }}>----</button>
+                  <button className="na-ibtn" onClick={resetChat} title="Switch role" style={{ background:"none", border:"none", color:"rgba(255,255,255,.2)", cursor:"pointer", fontSize:"15px", padding:"4px 6px", borderRadius:"6px" }}>---</button>
                 </>
               )}
-              <button className="na-ibtn" onClick={() => setChatState("minimized")} title="Minimise" style={{ background:"none", border:"none", color:"rgba(255,255,255,.2)", cursor:"pointer", fontSize:"15px", padding:"4px 6px", borderRadius:"6px", lineHeight:1 }}>─</button>
-              <button className="na-ibtn" onClick={() => setChatState("closed")} style={{ background:"none", border:"none", color:"rgba(255,255,255,.2)", cursor:"pointer", fontSize:"18px", padding:"4px 6px", lineHeight:1, borderRadius:"6px" }}>×</button>
+              <button className="na-ibtn" onClick={() => setChatState("minimized")} title="Minimise" style={{ background:"none", border:"none", color:"rgba(255,255,255,.2)", cursor:"pointer", fontSize:"15px", padding:"4px 6px", borderRadius:"6px", lineHeight:1 }}>-</button>
+              <button className="na-ibtn" onClick={() => setChatState("closed")} style={{ background:"none", border:"none", color:"rgba(255,255,255,.2)", cursor:"pointer", fontSize:"18px", padding:"4px 6px", lineHeight:1, borderRadius:"6px" }}>--</button>
             </div>
           </div>
 
           {/* Message body */}
           <div style={{ flex:1, overflowY:"auto", padding:"14px", display:"flex", flexDirection:"column", gap:"10px" }}>
 
-            {/* ── Role selection ── */}
+            {/* -- Role selection -- */}
             {!userType && (
               <div style={{ padding:"6px 2px" }}>
                 <div style={{ textAlign:"center", marginBottom:"16px" }}>
@@ -434,8 +434,8 @@ export default function NeuroAssist() {
                 <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
                   {(
                     [
-                      { type:"clinician" as UserType, emoji:"🩺", label:"Clinician / Researcher", sub:"Technical detail — features, pipeline, clinical metrics" },
-                      { type:"patient"   as UserType, emoji:"👤", label:"Patient / General User",  sub:"Plain language — what things mean, what to look at" },
+                      { type:"clinician" as UserType, emoji:"----", label:"Clinician / Researcher", sub:"Technical detail --- features, pipeline, clinical metrics" },
+                      { type:"patient"   as UserType, emoji:"----", label:"Patient / General User",  sub:"Plain language --- what things mean, what to look at" },
                     ] as const
                   ).map(({ type, emoji, label, sub }) => (
                     <button
@@ -457,7 +457,7 @@ export default function NeuroAssist() {
               </div>
             )}
 
-            {/* ── "What's on this page?" quick button + initial chips ── */}
+            {/* -- "What's on this page?" quick button + initial chips -- */}
             {userType && messages.length === 0 && (
               <div>
                 <button
@@ -465,7 +465,7 @@ export default function NeuroAssist() {
                   onClick={() => sendMessage(`What's happening on the ${page.label} page?`)}
                   style={{ width:"100%", background:"linear-gradient(135deg,rgba(124,58,237,.12),rgba(124,58,237,.04))", border:"1px solid rgba(124,58,237,.3)", borderRadius:"10px", padding:"11px 14px", color:"rgba(167,139,250,.9)", fontSize:"12px", fontWeight:600, cursor:"pointer", textAlign:"center", marginBottom:"10px" }}
                 >
-                  👁 What&apos;s happening on this page?
+                  ---- What&apos;s happening on this page?
                 </button>
                 <div style={{ color:"rgba(255,255,255,.25)", fontSize:"11px", marginBottom:"8px", textAlign:"center" }}>
                   or ask something specific:
@@ -485,7 +485,7 @@ export default function NeuroAssist() {
               </div>
             )}
 
-            {/* ── Message list ── */}
+            {/* -- Message list -- */}
             {messages.map((m, i) => (
               <div key={m.id} className="na-grp">
                 {m.isSystem ? (
@@ -511,7 +511,7 @@ export default function NeuroAssist() {
                       {m.role === "assistant" && !m.isSystem && (
                         <>
                           <button className="na-act" onClick={() => copyMessage(m.content, m.id)} style={{ background:"none", border:"none", color:copiedId===m.id?"#7c3aed":"rgba(255,255,255,.25)", cursor:"pointer", padding:"2px", display:"flex", alignItems:"center" }}>
-                            {copiedId === m.id ? <span style={{ fontSize:"10px" }}>✓</span> : <CopyIcon />}
+                            {copiedId === m.id ? <span style={{ fontSize:"10px" }}>---</span> : <CopyIcon />}
                           </button>
                           <button className="na-act" onClick={() => setFeedbackFor(m.id, "up")} style={{ background:"none", border:"none", color:feedback[m.id]==="up"?"#7c3aed":"rgba(255,255,255,.25)", cursor:"pointer", padding:"2px", display:"flex", alignItems:"center" }}>
                             <ThumbIcon up={true} />
@@ -533,7 +533,7 @@ export default function NeuroAssist() {
                             onClick={() => sendMessage(s)}
                             style={{ background:"rgba(255,255,255,.03)", border:"1px solid rgba(255,255,255,.06)", borderRadius:"7px", padding:"6px 10px", color:"rgba(255,255,255,.38)", fontSize:"11px", cursor:"pointer", textAlign:"left", animationDelay:`${si * 0.06}s` }}
                           >
-                            ↳ {s}
+                            --- {s}
                           </button>
                         ))}
                       </div>
@@ -583,7 +583,7 @@ export default function NeuroAssist() {
         </div>
       )}
 
-      {/* ── FAB (hidden while minimized — the bar replaces it) ─────────────── */}
+      {/* -- FAB (hidden while minimized --- the bar replaces it) --------------- */}
       {chatState !== "minimized" && (
         <button
           className="na-fab"

@@ -5,7 +5,7 @@ import { Monitor, Bell, Shield, Cpu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePageTitle } from "@/lib/use-page-title";
 
-/* ── Primitives ─────────────────────────────────────────────────── */
+/* -- Primitives --------------------------------------------------- */
 
 function Toggle({
   enabled,
@@ -77,7 +77,7 @@ function SettingSelect({
   );
 }
 
-/* ── Page ───────────────────────────────────────────────────────── */
+/* -- Page --------------------------------------------------------- */
 
 export default function SettingsPage() {
   usePageTitle("Settings");

@@ -1,0 +1,1302 @@
+{
+  "task1": {
+    "by_model": {
+      "LightGBM": [
+        {
+          "feature": "csf_ptau_abeta42",
+          "label": "CSF pTau/A\u03b242",
+          "importance": 426.0,
+          "importance_norm": 1.0
+        },
+        {
+          "feature": "age",
+          "label": "age",
+          "importance": 390.0,
+          "importance_norm": 0.9155
+        },
+        {
+          "feature": "L_d2_dissimilarity_dirStd_std",
+          "label": "L d=2 dissimilarity dirStd\u2195",
+          "importance": 369.0,
+          "importance_norm": 0.8662
+        },
+        {
+          "feature": "apoe_e4_count",
+          "label": "APOE e4 count",
+          "importance": 363.0,
+          "importance_norm": 0.8521
+        },
+        {
+          "feature": "education",
+          "label": "education",
+          "importance": 320.0,
+          "importance_norm": 0.7512
+        },
+        {
+          "feature": "mmse_date",
+          "label": "mmse_date",
+          "importance": 318.0,
+          "importance_norm": 0.7465
+        },
+        {
+          "feature": "R_d4_dissimilarity_dirStd_std",
+          "label": "R d=4 dissimilarity dirStd\u2195",
+          "importance": 317.0,
+          "importance_norm": 0.7441
+        },
+        {
+          "feature": "R_d4_dissimilarity_dirStd_mean",
+          "label": "R d=4 dissimilarity dirStd\u2193",
+          "importance": 311.0,
+          "importance_norm": 0.73
+        },
+        {
+          "feature": "csf_PTAU",
+          "label": "CSF pTau",
+          "importance": 295.0,
+          "importance_norm": 0.6925
+        },
+        {
+          "feature": "R_d2_dissimilarity_dirStd_std",
+          "label": "R d=2 dissimilarity dirStd\u2195",
+          "importance": 265.0,
+          "importance_norm": 0.6221
+        },
+        {
+          "feature": "L_d4_dissimilarity_dirStd_std",
+          "label": "L d=4 dissimilarity dirStd\u2195",
+          "importance": 237.0,
+          "importance_norm": 0.5563
+        },
+        {
+          "feature": "csf_ABETA42",
+          "label": "CSF A\u03b242",
+          "importance": 210.0,
+          "importance_norm": 0.493
+        },
+        {
+          "feature": "asym_ratio_d1_homogeneity_dirStd_std",
+          "label": "Asymmetry d1_homogeneity dirStd\u2195",
+          "importance": 206.0,
+          "importance_norm": 0.4836
+        },
+        {
+          "feature": "L_d2_contrast_mean",
+          "label": "L d=2 contrast mean",
+          "importance": 203.0,
+          "importance_norm": 0.4765
+        },
+        {
+          "feature": "R_d1_dissimilarity_dirStd_mean",
+          "label": "R d=1 dissimilarity dirStd\u2193",
+          "importance": 199.0,
+          "importance_norm": 0.4671
+        }
+      ],
+      "LogReg_L1": [
+        {
+          "feature": "apoe_e4_count",
+          "label": "APOE e4 count",
+          "importance": 0.908467,
+          "importance_norm": 1.0
+        },
+        {
+          "feature": "csf_ptau_abeta42",
+          "label": "CSF pTau/A\u03b242",
+          "importance": 0.780694,
+          "importance_norm": 0.8594
+        },
+        {
+          "feature": "R_d4_contrast_std",
+          "label": "R d=4 contrast std",
+          "importance": 0.690937,
+          "importance_norm": 0.7606
+        },
+        {
+          "feature": "R_d4_dissimilarity_dirStd_std",
+          "label": "R d=4 dissimilarity dirStd\u2195",
+          "importance": 0.666578,
+          "importance_norm": 0.7337
+        },
+        {
+          "feature": "R_d2_dissimilarity_dirStd_std",
+          "label": "R d=2 dissimilarity dirStd\u2195",
+          "importance": 0.666441,
+          "importance_norm": 0.7336
+        },
+        {
+          "feature": "R_d4_dissimilarity_dirStd_mean",
+          "label": "R d=4 dissimilarity dirStd\u2193",
+          "importance": 0.570126,
+          "importance_norm": 0.6276
+        },
+        {
+          "feature": "asym_ratio_d1_dissimilarity_std",
+          "label": "Asymmetry d1_dissimilarity std",
+          "importance": 0.45817,
+          "importance_norm": 0.5043
+        },
+        {
+          "feature": "age",
+          "label": "age",
+          "importance": 0.433965,
+          "importance_norm": 0.4777
+        },
+        {
+          "feature": "csf_PTAU",
+          "label": "CSF pTau",
+          "importance": 0.401782,
+          "importance_norm": 0.4423
+        },
+        {
+          "feature": "asym_ratio_d1_homogeneity_dirStd_std",
+          "label": "Asymmetry d1_homogeneity dirStd\u2195",
+          "importance": 0.36135,
+          "importance_norm": 0.3978
+        },
+        {
+          "feature": "asym_ratio_d1_dissimilarity_dirStd_std",
+          "label": "Asymmetry d1_dissimilarity dirStd\u2195",
+          "importance": 0.33749,
+          "importance_norm": 0.3715
+        },
+        {
+          "feature": "R_d1_dissimilarity_std",
+          "label": "R d=1 dissimilarity std",
+          "importance": 0.321144,
+          "importance_norm": 0.3535
+        },
+        {
+          "feature": "asym_ratio_d4_entropy_std",
+          "label": "Asymmetry d4_entropy std",
+          "importance": 0.287338,
+          "importance_norm": 0.3163
+        },
+        {
+          "feature": "csf_abeta40_abeta42",
+          "label": "CSF A\u03b240/A\u03b242",
+          "importance": 0.266988,
+          "importance_norm": 0.2939
+        },
+        {
+          "feature": "R_d1_contrast_mean",
+          "label": "R d=1 contrast mean",
+          "importance": 0.235656,
+          "importance_norm": 0.2594
+        }
+      ],
+      "XGBoost": [
+        {
+          "feature": "csf_ptau_abeta42",
+          "label": "CSF pTau/A\u03b242",
+          "importance": 0.067089,
+          "importance_norm": 1.0
+        },
+        {
+          "feature": "csf_ABETA40",
+          "label": "CSF ABETA40",
+          "importance": 0.063302,
+          "importance_norm": 0.9435
+        },
+        {
+          "feature": "csf_abeta40_abeta42",
+          "label": "CSF A\u03b240/A\u03b242",
+          "importance": 0.052002,
+          "importance_norm": 0.7751
+        },
+        {
+          "feature": "apoe_e4_count",
+          "label": "APOE e4 count",
+          "importance": 0.034626,
+          "importance_norm": 0.5161
+        },
+        {
+          "feature": "csf_ABETA42",
+          "label": "CSF A\u03b242",
+          "importance": 0.03087,
+          "importance_norm": 0.4601
+        },
+        {
+          "feature": "R_d2_dissimilarity_dirStd_std",
+          "label": "R d=2 dissimilarity dirStd\u2195",
+          "importance": 0.030038,
+          "importance_norm": 0.4477
+        },
+        {
+          "feature": "R_d4_dissimilarity_dirStd_std",
+          "label": "R d=4 dissimilarity dirStd\u2195",
+          "importance": 0.029117,
+          "importance_norm": 0.434
+        },
+        {
+          "feature": "L_d2_dissimilarity_dirStd_std",
+          "label": "L d=2 dissimilarity dirStd\u2195",
+          "importance": 0.021252,
+          "importance_norm": 0.3168
+        },
+        {
+          "feature": "L_d2_contrast_mean",
+          "label": "L d=2 contrast mean",
+          "importance": 0.016004,
+          "importance_norm": 0.2385
+        },
+        {
+          "feature": "R_d4_dissimilarity_dirStd_mean",
+          "label": "R d=4 dissimilarity dirStd\u2193",
+          "importance": 0.015896,
+          "importance_norm": 0.2369
+        },
+        {
+          "feature": "csf_PTAU",
+          "label": "CSF pTau",
+          "importance": 0.015058,
+          "importance_norm": 0.2244
+        },
+        {
+          "feature": "A_d2_contrast_std",
+          "label": "A_d2_contrast std",
+          "importance": 0.013473,
+          "importance_norm": 0.2008
+        },
+        {
+          "feature": "R_d1_contrast_mean",
+          "label": "R d=1 contrast mean",
+          "importance": 0.012156,
+          "importance_norm": 0.1812
+        },
+        {
+          "feature": "L_d1_homogeneity_mean",
+          "label": "L d=1 homogeneity mean",
+          "importance": 0.00998,
+          "importance_norm": 0.1488
+        },
+        {
+          "feature": "asym_ratio_d1_energy_dirStd_mean",
+          "label": "Asymmetry d1_energy dirStd\u2193",
+          "importance": 0.009466,
+          "importance_norm": 0.1411
+        }
+      ]
+    },
+    "top_features": [
+      {
+        "rank": 1,
+        "feature": "csf_ptau_abeta42",
+        "label": "CSF pTau/A\u03b242",
+        "importance": 0.9531
+      },
+      {
+        "rank": 2,
+        "feature": "apoe_e4_count",
+        "label": "APOE e4 count",
+        "importance": 0.7894
+      },
+      {
+        "rank": 3,
+        "feature": "R_d4_dissimilarity_dirStd_std",
+        "label": "R d=4 dissimilarity dirStd\u2195",
+        "importance": 0.6373
+      },
+      {
+        "rank": 4,
+        "feature": "R_d2_dissimilarity_dirStd_std",
+        "label": "R d=2 dissimilarity dirStd\u2195",
+        "importance": 0.6011
+      },
+      {
+        "rank": 5,
+        "feature": "R_d4_dissimilarity_dirStd_mean",
+        "label": "R d=4 dissimilarity dirStd\u2193",
+        "importance": 0.5315
+      },
+      {
+        "rank": 6,
+        "feature": "age",
+        "label": "age",
+        "importance": 0.5084
+      },
+      {
+        "rank": 7,
+        "feature": "csf_PTAU",
+        "label": "CSF pTau",
+        "importance": 0.4531
+      },
+      {
+        "rank": 8,
+        "feature": "L_d2_dissimilarity_dirStd_std",
+        "label": "L d=2 dissimilarity dirStd\u2195",
+        "importance": 0.3943
+      },
+      {
+        "rank": 9,
+        "feature": "R_d4_contrast_std",
+        "label": "R d=4 contrast std",
+        "importance": 0.3888
+      },
+      {
+        "rank": 10,
+        "feature": "csf_abeta40_abeta42",
+        "label": "CSF A\u03b240/A\u03b242",
+        "importance": 0.3751
+      },
+      {
+        "rank": 11,
+        "feature": "education",
+        "label": "education",
+        "importance": 0.3724
+      },
+      {
+        "rank": 12,
+        "feature": "asym_ratio_d1_dissimilarity_std",
+        "label": "Asymmetry d1_dissimilarity std",
+        "importance": 0.344
+      },
+      {
+        "rank": 13,
+        "feature": "asym_ratio_d1_homogeneity_dirStd_std",
+        "label": "Asymmetry d1_homogeneity dirStd\u2195",
+        "importance": 0.3331
+      },
+      {
+        "rank": 14,
+        "feature": "csf_ABETA40",
+        "label": "CSF ABETA40",
+        "importance": 0.3208
+      },
+      {
+        "rank": 15,
+        "feature": "csf_ABETA42",
+        "label": "CSF A\u03b242",
+        "importance": 0.3177
+      }
+    ],
+    "consensus": [
+      {
+        "rank": 1,
+        "feature": "csf_ptau_abeta42",
+        "label": "CSF pTau/A\u03b242",
+        "importance": 0.9531
+      },
+      {
+        "rank": 2,
+        "feature": "apoe_e4_count",
+        "label": "APOE e4 count",
+        "importance": 0.7894
+      },
+      {
+        "rank": 3,
+        "feature": "R_d4_dissimilarity_dirStd_std",
+        "label": "R d=4 dissimilarity dirStd\u2195",
+        "importance": 0.6373
+      },
+      {
+        "rank": 4,
+        "feature": "R_d2_dissimilarity_dirStd_std",
+        "label": "R d=2 dissimilarity dirStd\u2195",
+        "importance": 0.6011
+      },
+      {
+        "rank": 5,
+        "feature": "R_d4_dissimilarity_dirStd_mean",
+        "label": "R d=4 dissimilarity dirStd\u2193",
+        "importance": 0.5315
+      },
+      {
+        "rank": 6,
+        "feature": "age",
+        "label": "age",
+        "importance": 0.5084
+      },
+      {
+        "rank": 7,
+        "feature": "csf_PTAU",
+        "label": "CSF pTau",
+        "importance": 0.4531
+      },
+      {
+        "rank": 8,
+        "feature": "L_d2_dissimilarity_dirStd_std",
+        "label": "L d=2 dissimilarity dirStd\u2195",
+        "importance": 0.3943
+      },
+      {
+        "rank": 9,
+        "feature": "R_d4_contrast_std",
+        "label": "R d=4 contrast std",
+        "importance": 0.3888
+      },
+      {
+        "rank": 10,
+        "feature": "csf_abeta40_abeta42",
+        "label": "CSF A\u03b240/A\u03b242",
+        "importance": 0.3751
+      },
+      {
+        "rank": 11,
+        "feature": "education",
+        "label": "education",
+        "importance": 0.3724
+      },
+      {
+        "rank": 12,
+        "feature": "asym_ratio_d1_dissimilarity_std",
+        "label": "Asymmetry d1_dissimilarity std",
+        "importance": 0.344
+      },
+      {
+        "rank": 13,
+        "feature": "asym_ratio_d1_homogeneity_dirStd_std",
+        "label": "Asymmetry d1_homogeneity dirStd\u2195",
+        "importance": 0.3331
+      },
+      {
+        "rank": 14,
+        "feature": "csf_ABETA40",
+        "label": "CSF ABETA40",
+        "importance": 0.3208
+      },
+      {
+        "rank": 15,
+        "feature": "csf_ABETA42",
+        "label": "CSF A\u03b242",
+        "importance": 0.3177
+      }
+    ]
+  },
+  "task2": {
+    "by_model": {
+      "LogReg_L1": [
+        {
+          "feature": "temp_L_d2_contrast_dirStd_std_std",
+          "label": "Temporal L d=2 contrast dirStd\u2195 std",
+          "importance": 0.461388,
+          "importance_norm": 1.0
+        },
+        {
+          "feature": "temp_R_d4_dissimilarity_dirStd_std_mean",
+          "label": "Temporal R d=4 dissimilarity dirStd\u2195 mean",
+          "importance": 0.216254,
+          "importance_norm": 0.4687
+        },
+        {
+          "feature": "temp_asym_ratio_d4_correlation_std_std",
+          "label": "Temporal Asymmetry d4_correlation std std",
+          "importance": 0.155696,
+          "importance_norm": 0.3375
+        },
+        {
+          "feature": "temp_R_d2_dissimilarity_dirStd_std_mean",
+          "label": "Temporal R d=2 dissimilarity dirStd\u2195 mean",
+          "importance": 0.132399,
+          "importance_norm": 0.287
+        },
+        {
+          "feature": "temp_R_d4_contrast_dirStd_std_r2",
+          "label": "Temporal R d=4 contrast dirStd\u2195_r2",
+          "importance": 0.117039,
+          "importance_norm": 0.2537
+        },
+        {
+          "feature": "temp_asym_ratio_d4_homogeneity_dirStd_std_std",
+          "label": "Temporal Asymmetry d4_homogeneity dirStd\u2195 std",
+          "importance": 0.107242,
+          "importance_norm": 0.2324
+        },
+        {
+          "feature": "temp_R_d4_dissimilarity_dirStd_std_delta",
+          "label": "Temporal R d=4 dissimilarity dirStd\u2195_delta",
+          "importance": 0.103078,
+          "importance_norm": 0.2234
+        },
+        {
+          "feature": "temp_A_d1_contrast_std_r2",
+          "label": "Temporal A_d1_contrast std_r2",
+          "importance": 0.088313,
+          "importance_norm": 0.1914
+        },
+        {
+          "feature": "csf_baseline_csf_ptau_abeta42",
+          "label": "CSF Baseline CSF pTau/A\u03b242",
+          "importance": 0.0777,
+          "importance_norm": 0.1684
+        },
+        {
+          "feature": "temp_L_d4_contrast_dirStd_std_slope",
+          "label": "Temporal L d=4 contrast dirStd\u2195_slope",
+          "importance": 0.059448,
+          "importance_norm": 0.1288
+        },
+        {
+          "feature": "temp_L_d4_max_prob_std_r2",
+          "label": "Temporal L d=4 max_prob std_r2",
+          "importance": 0.051041,
+          "importance_norm": 0.1106
+        },
+        {
+          "feature": "temp_R_d2_correlation_dirStd_std_r2",
+          "label": "Temporal R d=2 correlation dirStd\u2195_r2",
+          "importance": 0.047953,
+          "importance_norm": 0.1039
+        },
+        {
+          "feature": "temp_asym_ratio_d2_max_prob_dirStd_std_r2",
+          "label": "Temporal Asymmetry d2_max_prob dirStd\u2195_r2",
+          "importance": 0.040811,
+          "importance_norm": 0.0885
+        },
+        {
+          "feature": "temp_L_d4_contrast_dirStd_mean_slope",
+          "label": "Temporal L d=4 contrast dirStd\u2193_slope",
+          "importance": 0.023232,
+          "importance_norm": 0.0504
+        },
+        {
+          "feature": "temp_asym_ratio_d4_correlation_dirStd_std_std",
+          "label": "Temporal Asymmetry d4_correlation dirStd\u2195 std",
+          "importance": 0.018841,
+          "importance_norm": 0.0408
+        }
+      ],
+      "RandomForest": [
+        {
+          "feature": "temp_L_d2_contrast_dirStd_std_std",
+          "label": "Temporal L d=2 contrast dirStd\u2195 std",
+          "importance": 0.021803,
+          "importance_norm": 1.0
+        },
+        {
+          "feature": "temp_L_d2_contrast_dirStd_std_delta",
+          "label": "Temporal L d=2 contrast dirStd\u2195_delta",
+          "importance": 0.017881,
+          "importance_norm": 0.8201
+        },
+        {
+          "feature": "temp_R_d4_dissimilarity_dirStd_std_delta",
+          "label": "Temporal R d=4 dissimilarity dirStd\u2195_delta",
+          "importance": 0.017503,
+          "importance_norm": 0.8028
+        },
+        {
+          "feature": "temp_L_d4_contrast_dirStd_std_std",
+          "label": "Temporal L d=4 contrast dirStd\u2195 std",
+          "importance": 0.015706,
+          "importance_norm": 0.7203
+        },
+        {
+          "feature": "temp_R_d4_contrast_dirStd_std_std",
+          "label": "Temporal R d=4 contrast dirStd\u2195 std",
+          "importance": 0.01535,
+          "importance_norm": 0.704
+        },
+        {
+          "feature": "temp_L_d4_dissimilarity_dirStd_std_delta",
+          "label": "Temporal L d=4 dissimilarity dirStd\u2195_delta",
+          "importance": 0.01314,
+          "importance_norm": 0.6027
+        },
+        {
+          "feature": "temp_R_d4_dissimilarity_dirStd_mean_std",
+          "label": "Temporal R d=4 dissimilarity dirStd\u2193 std",
+          "importance": 0.01144,
+          "importance_norm": 0.5247
+        },
+        {
+          "feature": "temp_R_d4_contrast_dirStd_std_slope",
+          "label": "Temporal R d=4 contrast dirStd\u2195_slope",
+          "importance": 0.011202,
+          "importance_norm": 0.5138
+        },
+        {
+          "feature": "temp_asym_diff_d4_contrast_dirStd_std_std",
+          "label": "Temporal Asymmetry \u0394 d4_contrast dirStd\u2195 std",
+          "importance": 0.011087,
+          "importance_norm": 0.5085
+        },
+        {
+          "feature": "temp_R_d4_dissimilarity_std_std",
+          "label": "Temporal R d=4 dissimilarity std std",
+          "importance": 0.009367,
+          "importance_norm": 0.4296
+        },
+        {
+          "feature": "temp_L_d4_contrast_dirStd_std_slope",
+          "label": "Temporal L d=4 contrast dirStd\u2195_slope",
+          "importance": 0.009142,
+          "importance_norm": 0.4193
+        },
+        {
+          "feature": "temp_L_d4_dissimilarity_mean_std",
+          "label": "Temporal L d=4 dissimilarity mean std",
+          "importance": 0.008681,
+          "importance_norm": 0.3981
+        },
+        {
+          "feature": "temp_asym_ratio_d4_correlation_dirStd_std_std",
+          "label": "Temporal Asymmetry d4_correlation dirStd\u2195 std",
+          "importance": 0.008594,
+          "importance_norm": 0.3942
+        },
+        {
+          "feature": "temp_R_d2_contrast_dirStd_std_mean",
+          "label": "Temporal R d=2 contrast dirStd\u2195 mean",
+          "importance": 0.007729,
+          "importance_norm": 0.3545
+        },
+        {
+          "feature": "temp_R_d2_contrast_dirStd_std_delta",
+          "label": "Temporal R d=2 contrast dirStd\u2195_delta",
+          "importance": 0.007678,
+          "importance_norm": 0.3521
+        }
+      ],
+      "XGBoost": [
+        {
+          "feature": "temp_L_d2_contrast_dirStd_std_std",
+          "label": "Temporal L d=2 contrast dirStd\u2195 std",
+          "importance": 0.021385,
+          "importance_norm": 1.0
+        },
+        {
+          "feature": "temp_L_d2_contrast_dirStd_std_delta",
+          "label": "Temporal L d=2 contrast dirStd\u2195_delta",
+          "importance": 0.017424,
+          "importance_norm": 0.8148
+        },
+        {
+          "feature": "temp_R_d4_dissimilarity_dirStd_std_delta",
+          "label": "Temporal R d=4 dissimilarity dirStd\u2195_delta",
+          "importance": 0.015303,
+          "importance_norm": 0.7156
+        },
+        {
+          "feature": "temp_R_d1_energy_dirStd_mean_r2",
+          "label": "Temporal R d=1 energy dirStd\u2193_r2",
+          "importance": 0.013369,
+          "importance_norm": 0.6251
+        },
+        {
+          "feature": "temp_L_d4_contrast_std_slope",
+          "label": "Temporal L d=4 contrast std_slope",
+          "importance": 0.012848,
+          "importance_norm": 0.6008
+        },
+        {
+          "feature": "temp_asym_ratio_d2_contrast_dirStd_std_mean",
+          "label": "Temporal Asymmetry d2_contrast dirStd\u2195 mean",
+          "importance": 0.012653,
+          "importance_norm": 0.5917
+        },
+        {
+          "feature": "temp_asym_ratio_d1_dissimilarity_dirStd_std_mean",
+          "label": "Temporal Asymmetry d1_dissimilarity dirStd\u2195 mean",
+          "importance": 0.01205,
+          "importance_norm": 0.5635
+        },
+        {
+          "feature": "temp_R_d2_energy_dirStd_mean_r2",
+          "label": "Temporal R d=2 energy dirStd\u2193_r2",
+          "importance": 0.011325,
+          "importance_norm": 0.5296
+        },
+        {
+          "feature": "csf_baseline_csf_ptau_abeta42",
+          "label": "CSF Baseline CSF pTau/A\u03b242",
+          "importance": 0.010772,
+          "importance_norm": 0.5037
+        },
+        {
+          "feature": "temp_asym_diff_d4_contrast_dirStd_std_std",
+          "label": "Temporal Asymmetry \u0394 d4_contrast dirStd\u2195 std",
+          "importance": 0.010381,
+          "importance_norm": 0.4854
+        },
+        {
+          "feature": "temp_L_d4_contrast_dirStd_std_std",
+          "label": "Temporal L d=4 contrast dirStd\u2195 std",
+          "importance": 0.010168,
+          "importance_norm": 0.4755
+        },
+        {
+          "feature": "temp_R_d2_max_prob_dirStd_std_r2",
+          "label": "Temporal R d=2 max_prob dirStd\u2195_r2",
+          "importance": 0.009693,
+          "importance_norm": 0.4533
+        },
+        {
+          "feature": "temp_L_d2_dissimilarity_dirStd_std_mean",
+          "label": "Temporal L d=2 dissimilarity dirStd\u2195 mean",
+          "importance": 0.009454,
+          "importance_norm": 0.4421
+        },
+        {
+          "feature": "temp_asym_ratio_d4_energy_std_delta",
+          "label": "Temporal Asymmetry d4_energy std_delta",
+          "importance": 0.009354,
+          "importance_norm": 0.4374
+        },
+        {
+          "feature": "temp_L_d2_correlation_dirStd_std_r2",
+          "label": "Temporal L d=2 correlation dirStd\u2195_r2",
+          "importance": 0.008911,
+          "importance_norm": 0.4167
+        }
+      ]
+    },
+    "top_features": [
+      {
+        "rank": 1,
+        "feature": "temp_L_d2_contrast_dirStd_std_std",
+        "label": "Temporal L d=2 contrast dirStd\u2195 std",
+        "importance": 1.0
+      },
+      {
+        "rank": 2,
+        "feature": "temp_R_d4_dissimilarity_dirStd_std_delta",
+        "label": "Temporal R d=4 dissimilarity dirStd\u2195_delta",
+        "importance": 0.5806
+      },
+      {
+        "rank": 3,
+        "feature": "temp_L_d2_contrast_dirStd_std_delta",
+        "label": "Temporal L d=2 contrast dirStd\u2195_delta",
+        "importance": 0.545
+      },
+      {
+        "rank": 4,
+        "feature": "temp_L_d4_contrast_dirStd_std_std",
+        "label": "Temporal L d=4 contrast dirStd\u2195 std",
+        "importance": 0.3986
+      },
+      {
+        "rank": 5,
+        "feature": "temp_R_d4_dissimilarity_dirStd_std_mean",
+        "label": "Temporal R d=4 dissimilarity dirStd\u2195 mean",
+        "importance": 0.3508
+      },
+      {
+        "rank": 6,
+        "feature": "temp_asym_diff_d4_contrast_dirStd_std_std",
+        "label": "Temporal Asymmetry \u0394 d4_contrast dirStd\u2195 std",
+        "importance": 0.3313
+      },
+      {
+        "rank": 7,
+        "feature": "temp_asym_ratio_d2_contrast_dirStd_std_mean",
+        "label": "Temporal Asymmetry d2_contrast dirStd\u2195 mean",
+        "importance": 0.3038
+      },
+      {
+        "rank": 8,
+        "feature": "temp_R_d4_contrast_dirStd_std_slope",
+        "label": "Temporal R d=4 contrast dirStd\u2195_slope",
+        "importance": 0.2931
+      },
+      {
+        "rank": 9,
+        "feature": "csf_baseline_csf_ptau_abeta42",
+        "label": "CSF Baseline CSF pTau/A\u03b242",
+        "importance": 0.2815
+      },
+      {
+        "rank": 10,
+        "feature": "temp_R_d2_dissimilarity_dirStd_std_mean",
+        "label": "Temporal R d=2 dissimilarity dirStd\u2195 mean",
+        "importance": 0.275
+      },
+      {
+        "rank": 11,
+        "feature": "temp_L_d4_contrast_dirStd_std_slope",
+        "label": "Temporal L d=4 contrast dirStd\u2195_slope",
+        "importance": 0.2506
+      },
+      {
+        "rank": 12,
+        "feature": "temp_L_d2_dissimilarity_dirStd_std_mean",
+        "label": "Temporal L d=2 dissimilarity dirStd\u2195 mean",
+        "importance": 0.2489
+      },
+      {
+        "rank": 13,
+        "feature": "temp_R_d4_contrast_dirStd_std_std",
+        "label": "Temporal R d=4 contrast dirStd\u2195 std",
+        "importance": 0.2347
+      },
+      {
+        "rank": 14,
+        "feature": "temp_L_d4_contrast_std_slope",
+        "label": "Temporal L d=4 contrast std_slope",
+        "importance": 0.2315
+      },
+      {
+        "rank": 15,
+        "feature": "temp_R_d1_energy_dirStd_mean_r2",
+        "label": "Temporal R d=1 energy dirStd\u2193_r2",
+        "importance": 0.229
+      }
+    ],
+    "consensus": [
+      {
+        "rank": 1,
+        "feature": "temp_L_d2_contrast_dirStd_std_std",
+        "label": "Temporal L d=2 contrast dirStd\u2195 std",
+        "importance": 1.0
+      },
+      {
+        "rank": 2,
+        "feature": "temp_R_d4_dissimilarity_dirStd_std_delta",
+        "label": "Temporal R d=4 dissimilarity dirStd\u2195_delta",
+        "importance": 0.5806
+      },
+      {
+        "rank": 3,
+        "feature": "temp_L_d2_contrast_dirStd_std_delta",
+        "label": "Temporal L d=2 contrast dirStd\u2195_delta",
+        "importance": 0.545
+      },
+      {
+        "rank": 4,
+        "feature": "temp_L_d4_contrast_dirStd_std_std",
+        "label": "Temporal L d=4 contrast dirStd\u2195 std",
+        "importance": 0.3986
+      },
+      {
+        "rank": 5,
+        "feature": "temp_R_d4_dissimilarity_dirStd_std_mean",
+        "label": "Temporal R d=4 dissimilarity dirStd\u2195 mean",
+        "importance": 0.3508
+      },
+      {
+        "rank": 6,
+        "feature": "temp_asym_diff_d4_contrast_dirStd_std_std",
+        "label": "Temporal Asymmetry \u0394 d4_contrast dirStd\u2195 std",
+        "importance": 0.3313
+      },
+      {
+        "rank": 7,
+        "feature": "temp_asym_ratio_d2_contrast_dirStd_std_mean",
+        "label": "Temporal Asymmetry d2_contrast dirStd\u2195 mean",
+        "importance": 0.3038
+      },
+      {
+        "rank": 8,
+        "feature": "temp_R_d4_contrast_dirStd_std_slope",
+        "label": "Temporal R d=4 contrast dirStd\u2195_slope",
+        "importance": 0.2931
+      },
+      {
+        "rank": 9,
+        "feature": "csf_baseline_csf_ptau_abeta42",
+        "label": "CSF Baseline CSF pTau/A\u03b242",
+        "importance": 0.2815
+      },
+      {
+        "rank": 10,
+        "feature": "temp_R_d2_dissimilarity_dirStd_std_mean",
+        "label": "Temporal R d=2 dissimilarity dirStd\u2195 mean",
+        "importance": 0.275
+      },
+      {
+        "rank": 11,
+        "feature": "temp_L_d4_contrast_dirStd_std_slope",
+        "label": "Temporal L d=4 contrast dirStd\u2195_slope",
+        "importance": 0.2506
+      },
+      {
+        "rank": 12,
+        "feature": "temp_L_d2_dissimilarity_dirStd_std_mean",
+        "label": "Temporal L d=2 dissimilarity dirStd\u2195 mean",
+        "importance": 0.2489
+      },
+      {
+        "rank": 13,
+        "feature": "temp_R_d4_contrast_dirStd_std_std",
+        "label": "Temporal R d=4 contrast dirStd\u2195 std",
+        "importance": 0.2347
+      },
+      {
+        "rank": 14,
+        "feature": "temp_L_d4_contrast_std_slope",
+        "label": "Temporal L d=4 contrast std_slope",
+        "importance": 0.2315
+      },
+      {
+        "rank": 15,
+        "feature": "temp_R_d1_energy_dirStd_mean_r2",
+        "label": "Temporal R d=1 energy dirStd\u2193_r2",
+        "importance": 0.229
+      }
+    ]
+  },
+  "task3": {
+    "by_model": {
+      "LightGBM": [
+        {
+          "feature": "age",
+          "label": "age",
+          "importance": 393.0,
+          "importance_norm": 1.0
+        },
+        {
+          "feature": "asym_ratio_d4_correlation_dirStd_std",
+          "label": "Asymmetry d4_correlation dirStd\u2195",
+          "importance": 271.0,
+          "importance_norm": 0.6896
+        },
+        {
+          "feature": "L_d2_contrast_mean",
+          "label": "L d=2 contrast mean",
+          "importance": 248.0,
+          "importance_norm": 0.631
+        },
+        {
+          "feature": "asym_ratio_d4_correlation_dirStd_mean",
+          "label": "Asymmetry d4_correlation dirStd\u2193",
+          "importance": 219.0,
+          "importance_norm": 0.5573
+        },
+        {
+          "feature": "mmse_date",
+          "label": "mmse_date",
+          "importance": 209.0,
+          "importance_norm": 0.5318
+        },
+        {
+          "feature": "R_d4_dissimilarity_dirStd_std",
+          "label": "R d=4 dissimilarity dirStd\u2195",
+          "importance": 203.0,
+          "importance_norm": 0.5165
+        },
+        {
+          "feature": "R_d2_dissimilarity_dirStd_std",
+          "label": "R d=2 dissimilarity dirStd\u2195",
+          "importance": 203.0,
+          "importance_norm": 0.5165
+        },
+        {
+          "feature": "asym_ratio_d1_correlation_std",
+          "label": "Asymmetry d1_correlation std",
+          "importance": 202.0,
+          "importance_norm": 0.514
+        },
+        {
+          "feature": "education",
+          "label": "education",
+          "importance": 199.0,
+          "importance_norm": 0.5064
+        },
+        {
+          "feature": "R_d4_correlation_std",
+          "label": "R d=4 correlation std",
+          "importance": 198.0,
+          "importance_norm": 0.5038
+        },
+        {
+          "feature": "R_d4_correlation_mean",
+          "label": "R d=4 correlation mean",
+          "importance": 198.0,
+          "importance_norm": 0.5038
+        },
+        {
+          "feature": "asym_ratio_d1_homogeneity_dirStd_std",
+          "label": "Asymmetry d1_homogeneity dirStd\u2195",
+          "importance": 198.0,
+          "importance_norm": 0.5038
+        },
+        {
+          "feature": "R_d4_dissimilarity_dirStd_mean",
+          "label": "R d=4 dissimilarity dirStd\u2193",
+          "importance": 196.0,
+          "importance_norm": 0.4987
+        },
+        {
+          "feature": "L_d4_correlation_std",
+          "label": "L d=4 correlation std",
+          "importance": 188.0,
+          "importance_norm": 0.4784
+        },
+        {
+          "feature": "R_d2_contrast_dirStd_std",
+          "label": "R d=2 contrast dirStd\u2195",
+          "importance": 188.0,
+          "importance_norm": 0.4784
+        }
+      ],
+      "LogReg_L1": [
+        {
+          "feature": "R_d4_dissimilarity_std",
+          "label": "R d=4 dissimilarity std",
+          "importance": 0.788559,
+          "importance_norm": 1.0
+        },
+        {
+          "feature": "asym_diff_d4_contrast_dirStd_std",
+          "label": "Asymmetry \u0394 d4_contrast dirStd\u2195",
+          "importance": 0.655034,
+          "importance_norm": 0.8307
+        },
+        {
+          "feature": "R_d2_contrast_std",
+          "label": "R d=2 contrast std",
+          "importance": 0.64071,
+          "importance_norm": 0.8125
+        },
+        {
+          "feature": "age",
+          "label": "age",
+          "importance": 0.633887,
+          "importance_norm": 0.8039
+        },
+        {
+          "feature": "asym_ratio_d2_contrast_dirStd_std",
+          "label": "Asymmetry d2_contrast dirStd\u2195",
+          "importance": 0.48685,
+          "importance_norm": 0.6174
+        },
+        {
+          "feature": "R_d4_dissimilarity_dirStd_std",
+          "label": "R d=4 dissimilarity dirStd\u2195",
+          "importance": 0.466436,
+          "importance_norm": 0.5915
+        },
+        {
+          "feature": "asym_ratio_d1_homogeneity_dirStd_std",
+          "label": "Asymmetry d1_homogeneity dirStd\u2195",
+          "importance": 0.452861,
+          "importance_norm": 0.5743
+        },
+        {
+          "feature": "A_d2_dissimilarity_std",
+          "label": "A_d2_dissimilarity std",
+          "importance": 0.43583,
+          "importance_norm": 0.5527
+        },
+        {
+          "feature": "asym_ratio_d1_dissimilarity_std",
+          "label": "Asymmetry d1_dissimilarity std",
+          "importance": 0.422376,
+          "importance_norm": 0.5356
+        },
+        {
+          "feature": "L_d2_contrast_mean",
+          "label": "L d=2 contrast mean",
+          "importance": 0.412638,
+          "importance_norm": 0.5233
+        },
+        {
+          "feature": "A_d4_dissimilarity_dirStd_std",
+          "label": "A_d4_dissimilarity dirStd\u2195",
+          "importance": 0.334309,
+          "importance_norm": 0.4239
+        },
+        {
+          "feature": "asym_ratio_d4_contrast_dirStd_std",
+          "label": "Asymmetry d4_contrast dirStd\u2195",
+          "importance": 0.325749,
+          "importance_norm": 0.4131
+        },
+        {
+          "feature": "race_Black",
+          "label": "Race: Black",
+          "importance": 0.277701,
+          "importance_norm": 0.3522
+        },
+        {
+          "feature": "A_d4_dissimilarity_std",
+          "label": "A_d4_dissimilarity std",
+          "importance": 0.27298,
+          "importance_norm": 0.3462
+        },
+        {
+          "feature": "asym_diff_d1_dissimilarity_mean",
+          "label": "Asymmetry \u0394 d1_dissimilarity mean",
+          "importance": 0.272741,
+          "importance_norm": 0.3459
+        }
+      ]
+    },
+    "top_features": [
+      {
+        "rank": 1,
+        "feature": "age",
+        "label": "age",
+        "importance": 0.9019
+      },
+      {
+        "rank": 2,
+        "feature": "R_d4_dissimilarity_std",
+        "label": "R d=4 dissimilarity std",
+        "importance": 0.6934
+      },
+      {
+        "rank": 3,
+        "feature": "L_d2_contrast_mean",
+        "label": "L d=2 contrast mean",
+        "importance": 0.5772
+      },
+      {
+        "rank": 4,
+        "feature": "R_d2_contrast_std",
+        "label": "R d=2 contrast std",
+        "importance": 0.5564
+      },
+      {
+        "rank": 5,
+        "feature": "R_d4_dissimilarity_dirStd_std",
+        "label": "R d=4 dissimilarity dirStd\u2195",
+        "importance": 0.554
+      },
+      {
+        "rank": 6,
+        "feature": "asym_ratio_d1_homogeneity_dirStd_std",
+        "label": "Asymmetry d1_homogeneity dirStd\u2195",
+        "importance": 0.5391
+      },
+      {
+        "rank": 7,
+        "feature": "asym_diff_d4_contrast_dirStd_std",
+        "label": "Asymmetry \u0394 d4_contrast dirStd\u2195",
+        "importance": 0.5044
+      },
+      {
+        "rank": 8,
+        "feature": "asym_ratio_d2_contrast_dirStd_std",
+        "label": "Asymmetry d2_contrast dirStd\u2195",
+        "importance": 0.4308
+      },
+      {
+        "rank": 9,
+        "feature": "asym_ratio_d4_correlation_dirStd_std",
+        "label": "Asymmetry d4_correlation dirStd\u2195",
+        "importance": 0.4288
+      },
+      {
+        "rank": 10,
+        "feature": "asym_ratio_d1_dissimilarity_std",
+        "label": "Asymmetry d1_dissimilarity std",
+        "importance": 0.4141
+      },
+      {
+        "rank": 11,
+        "feature": "A_d4_dissimilarity_dirStd_std",
+        "label": "A_d4_dissimilarity dirStd\u2195",
+        "importance": 0.4003
+      },
+      {
+        "rank": 12,
+        "feature": "A_d2_dissimilarity_dirStd_std",
+        "label": "A_d2_dissimilarity dirStd\u2195",
+        "importance": 0.3691
+      },
+      {
+        "rank": 13,
+        "feature": "asym_ratio_d1_correlation_std",
+        "label": "Asymmetry d1_correlation std",
+        "importance": 0.3556
+      },
+      {
+        "rank": 14,
+        "feature": "mmse_date",
+        "label": "mmse_date",
+        "importance": 0.3421
+      },
+      {
+        "rank": 15,
+        "feature": "A_d2_dissimilarity_std",
+        "label": "A_d2_dissimilarity std",
+        "importance": 0.3412
+      }
+    ],
+    "consensus": [
+      {
+        "rank": 1,
+        "feature": "age",
+        "label": "age",
+        "importance": 0.9019
+      },
+      {
+        "rank": 2,
+        "feature": "R_d4_dissimilarity_std",
+        "label": "R d=4 dissimilarity std",
+        "importance": 0.6934
+      },
+      {
+        "rank": 3,
+        "feature": "L_d2_contrast_mean",
+        "label": "L d=2 contrast mean",
+        "importance": 0.5772
+      },
+      {
+        "rank": 4,
+        "feature": "R_d2_contrast_std",
+        "label": "R d=2 contrast std",
+        "importance": 0.5564
+      },
+      {
+        "rank": 5,
+        "feature": "R_d4_dissimilarity_dirStd_std",
+        "label": "R d=4 dissimilarity dirStd\u2195",
+        "importance": 0.554
+      },
+      {
+        "rank": 6,
+        "feature": "asym_ratio_d1_homogeneity_dirStd_std",
+        "label": "Asymmetry d1_homogeneity dirStd\u2195",
+        "importance": 0.5391
+      },
+      {
+        "rank": 7,
+        "feature": "asym_diff_d4_contrast_dirStd_std",
+        "label": "Asymmetry \u0394 d4_contrast dirStd\u2195",
+        "importance": 0.5044
+      },
+      {
+        "rank": 8,
+        "feature": "asym_ratio_d2_contrast_dirStd_std",
+        "label": "Asymmetry d2_contrast dirStd\u2195",
+        "importance": 0.4308
+      },
+      {
+        "rank": 9,
+        "feature": "asym_ratio_d4_correlation_dirStd_std",
+        "label": "Asymmetry d4_correlation dirStd\u2195",
+        "importance": 0.4288
+      },
+      {
+        "rank": 10,
+        "feature": "asym_ratio_d1_dissimilarity_std",
+        "label": "Asymmetry d1_dissimilarity std",
+        "importance": 0.4141
+      },
+      {
+        "rank": 11,
+        "feature": "A_d4_dissimilarity_dirStd_std",
+        "label": "A_d4_dissimilarity dirStd\u2195",
+        "importance": 0.4003
+      },
+      {
+        "rank": 12,
+        "feature": "A_d2_dissimilarity_dirStd_std",
+        "label": "A_d2_dissimilarity dirStd\u2195",
+        "importance": 0.3691
+      },
+      {
+        "rank": 13,
+        "feature": "asym_ratio_d1_correlation_std",
+        "label": "Asymmetry d1_correlation std",
+        "importance": 0.3556
+      },
+      {
+        "rank": 14,
+        "feature": "mmse_date",
+        "label": "mmse_date",
+        "importance": 0.3421
+      },
+      {
+        "rank": 15,
+        "feature": "A_d2_dissimilarity_std",
+        "label": "A_d2_dissimilarity std",
+        "importance": 0.3412
+      }
+    ]
+  }
+}

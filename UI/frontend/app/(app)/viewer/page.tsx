@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import NiivueViewer, { type NiivueViewerHandle } from "@/components/ui/niivue-viewer";
 import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { VIEWER_DATA, type DatasetClass, type Plane } from "@/lib/cases";
 import { CaseSwitcher } from "@/components/ui/case-switcher";
+import { useAnalysisStore, type AnalysisCase } from "@/lib/analysis-store";
 import {
   Brain,
   Layers3,
@@ -19,11 +21,76 @@ import {
   Microscope,
   FileText,
   LayoutDashboard,
+  BookOpen,
+  X,
 } from "lucide-react";
 import { usePageTitle } from "@/lib/use-page-title";
 
 // Types and data imported from @/lib/cases
 type CaseInfo = import("@/lib/cases").ViewerCase;
+
+function buildLiveViewer(c: AnalysisCase): CaseInfo {
+  const final    = c.result.final;
+  const pred     = final.prediction;
+  const conf     = final.confidence;
+  const task1    = c.result.task1;
+  const task3    = c.result.task3;
+  const task2    = c.result.task2;
+
+  const datasetClass: DatasetClass =
+    pred.includes("Alzheimer") ? "AD" :
+    pred.includes("MCI")       ? "MCI" : "NC";
+
+  const decision =
+    datasetClass === "AD"  ? "Alzheimer's Disease likely" :
+    datasetClass === "MCI" ? (task2?.label === "converting_MCI" ? "Converting MCI --- High Risk" : "Stable MCI") :
+    "Cognitively Normal";
+
+  const adProb   = task1?.probabilities?.AD  ?? 0;
+  const mciProb  = task3?.probabilities?.MCI ?? 0;
+  const ncProb   = task1?.probabilities?.NC  ?? 0;
+  const convProb = task2?.probabilities?.converting_MCI ?? 0;
+
+  const recommendation =
+    datasetClass === "AD"
+      ? "Refer to specialist. Consider PET imaging and CSF biomarker confirmation."
+      : datasetClass === "MCI"
+      ? "Schedule 6-month follow-up MRI. Monitor with standardised cognitive assessments."
+      : "Routine monitoring as per standard clinical protocol.";
+
+  const summary =
+    `AD probability: ${(adProb*100).toFixed(1)}%, MCI probability: ${(mciProb*100).toFixed(1)}%. ` +
+    `Cascade stopped at ${final.cascade_stopped_at}. Final classification: ${pred}.`;
+
+  const notes =
+    `Patient: ${c.patient.age}yo ${c.patient.sex === "M" ? "male" : "female"}, ` +
+    `${c.patient.race || "race not recorded"}, ` +
+    `${c.patient.education} years education, APOE ${c.patient.apoe ?? "unknown"}. ` +
+    `${c.scans.length} longitudinal scan${c.scans.length > 1 ? "s" : ""} submitted.`;
+
+  return {
+    datasetClass,
+    decision,
+    confidence: conf,
+    region: c.region,
+    latency: "~3.2s",
+    status: "Complete",
+    summary,
+    notes,
+    recommendation,
+    defaultPlane: "Axial",
+    defaultSlice: 32,
+    defaultOverlayOpacity: 0.7,
+    // Only show tasks that actually ran --- each bar is one cascade stage's output,
+    // not a combined budget. "Normal Probability" is removed because it is simply
+    // 1 --- adProb from the same Task 1 classifier and adds no new information.
+    features: [
+      { name: "Task 1 --- AD probability",    value: adProb,   color: "bg-red-400"    },
+      ...(task3 ? [{ name: "Task 3 --- MCI probability",  value: mciProb,  color: "bg-amber-400"  }] : []),
+      ...(task2 ? [{ name: "Task 2 --- Conversion risk",  value: convProb, color: "bg-purple-400" }] : []),
+    ],
+  };
+}
 
 function riskTheme(datasetClass: DatasetClass) {
   if (datasetClass === "AD") {
@@ -136,7 +203,7 @@ function FakeHippocampusCanvas({
       </div>
 
       <div className="absolute right-4 top-4 rounded-xl border border-white/10 bg-black/45 px-3 py-1 text-[11px] text-white/70 backdrop-blur-md">
-        {planeLabel} • Slice {slice + 1}
+        {planeLabel} --- Slice {slice + 1}
       </div>
 
       {showCrosshair && (
@@ -154,13 +221,23 @@ export default function ViewerPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const caseId = searchParams.get("case") || "AUD-0231";
+  const caseId         = searchParams.get("case") || "AUD-0231";
   const fallbackRegion = searchParams.get("region") || "Bilateral Hippocampus";
 
-  const caseInfo = VIEWER_DATA[caseId] || {
-    ...VIEWER_DATA["AUD-0231"],
-    region: fallbackRegion,
-  };
+  const [storeReady, setStoreReady] = useState(false);
+  useEffect(() => { setStoreReady(true); }, []);
+
+  const storeCase  = useAnalysisStore((s) => s.getCase(caseId));
+  const latestCase = useAnalysisStore((s) => s.latestCase());
+
+  const liveCase: AnalysisCase | undefined = !storeReady ? undefined
+    : storeCase ?? ((!caseId || !VIEWER_DATA[caseId]) ? latestCase : undefined);
+
+  const caseInfo: CaseInfo = liveCase
+    ? buildLiveViewer(liveCase)
+    : VIEWER_DATA[caseId] ?? { ...VIEWER_DATA["AUD-0231"], region: fallbackRegion };
+
+  const displayCaseId = liveCase?.id ?? caseId;
 
   const [plane, setPlane] = useState<Plane>(caseInfo.defaultPlane);
   const [slice, setSlice] = useState(caseInfo.defaultSlice);
@@ -171,6 +248,33 @@ export default function ViewerPage() {
     caseInfo.defaultOverlayOpacity
   );
   const [barsMounted, setBarsMounted] = useState(false);
+  const [showManual, setShowManual] = useState(false);
+
+  // -- NiiVue integration ------------------------------------------------------
+  type ViewMode = "brain" | "focus";
+  const [viewMode, setViewMode] = useState<ViewMode>("brain");
+  const hasVolumes = !!liveCase?.result?.volumes;
+
+  const niivueBrainRef = useRef<NiivueViewerHandle | null>(null);
+  const niivueLRef     = useRef<NiivueViewerHandle | null>(null);
+  const niivueRRef     = useRef<NiivueViewerHandle | null>(null);
+
+  // Sync plane buttons --- NiiVue slice type
+  useEffect(() => {
+    if (!hasVolumes) return;
+    const type = plane === "Axial" ? "axial" : plane === "Coronal" ? "coronal" : "sagittal";
+    niivueBrainRef.current?.setSliceType(type);
+    niivueLRef.current?.setSliceType(type);
+    niivueRRef.current?.setSliceType(type);
+  }, [plane, hasVolumes]);
+
+  // Sync opacity slider --- NiiVue overlay layer
+  useEffect(() => {
+    if (!hasVolumes) return;
+    niivueBrainRef.current?.setOpacity(1, overlayOpacity);
+    niivueLRef.current?.setOpacity(1, overlayOpacity);
+    niivueRRef.current?.setOpacity(1, overlayOpacity);
+  }, [overlayOpacity, hasVolumes]);
 
   useEffect(() => {
     setPlane(caseInfo.defaultPlane);
@@ -199,7 +303,7 @@ export default function ViewerPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-6">
       <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
@@ -224,17 +328,29 @@ export default function ViewerPage() {
 
         <div className="flex flex-wrap gap-2">
           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs text-white/70">
-            Case: <span className="text-white/90">{caseId}</span> • Volume:{" "}
-            <span className="text-white/90">2 × 64 × 64 × 64</span>
+            Case: <span className="text-white/90">{displayCaseId}</span> --- Volume:{" "}
+            <span className="text-white/90">2 -- 64 -- 64 -- 64</span>
           </div>
           <div className="rounded-2xl border border-emerald-400/15 bg-emerald-400/[0.06] px-4 py-2 text-xs text-emerald-200/80">
-            Accelerated on <span className="text-emerald-100">PYNQ-Z2</span> •{" "}
+            Accelerated on <span className="text-emerald-100">PYNQ-Z2</span> ---{" "}
             <span className="text-emerald-100">{caseInfo.latency}</span>
           </div>
+          <button
+            onClick={() => setShowManual((v) => !v)}
+            className={cn(
+              "flex items-center gap-2 rounded-2xl border px-4 py-2 text-xs transition",
+              showManual
+                ? "border-cyan-400/30 bg-cyan-400/10 text-cyan-300"
+                : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
+            )}
+          >
+            <BookOpen className="h-3.5 w-3.5" />
+            Viewer Manual
+          </button>
         </div>
       </div>
 
-      <CaseSwitcher currentCaseId={caseId} />
+      <CaseSwitcher currentCaseId={displayCaseId} />
 
       <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[1.45fr_0.9fr]">
         <div className="space-y-5">
@@ -292,32 +408,97 @@ export default function ViewerPage() {
               </div>
             </div>
 
-            <div
-              className="grid grid-cols-1 gap-4 lg:grid-cols-2"
-              onWheel={onWheelSlices}
-            >
-              <FakeHippocampusCanvas
-                side="Left"
-                plane={plane}
-                slice={slice}
-                datasetClass={caseInfo.datasetClass}
-                showRegion={showRegion}
-                showHeatmap={showHeatmap}
-                showCrosshair={showCrosshair}
-                overlayOpacity={overlayOpacity}
-              />
+            {hasVolumes && liveCase ? (
+              <div className="space-y-4">
+                {/* View mode toggle */}
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 text-[10px] text-emerald-300">
+                    Live Scan
+                  </span>
+                  <div className="ml-auto flex gap-1">
+                    {(["brain", "focus"] as ViewMode[]).map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => setViewMode(m)}
+                        className={cn(
+                          "rounded-xl border px-3 py-1.5 text-xs transition",
+                          viewMode === m
+                            ? "border-white/15 bg-white/10 text-white"
+                            : "border-white/10 bg-white/5 text-white/60 hover:text-white",
+                        )}
+                      >
+                        {m === "brain" ? "Full Brain" : "Hippocampus Focus"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-              <FakeHippocampusCanvas
-                side="Right"
-                plane={plane}
-                slice={slice}
-                datasetClass={caseInfo.datasetClass}
-                showRegion={showRegion}
-                showHeatmap={showHeatmap}
-                showCrosshair={showCrosshair}
-                overlayOpacity={overlayOpacity}
-              />
-            </div>
+                {/* Full brain mode */}
+                {viewMode === "brain" && (
+                  <NiivueViewer
+                    ref={niivueBrainRef}
+                    jobId={liveCase.job_id}
+                    mode="brain"
+                    scanIndex={0}
+                    showMask={showHeatmap}
+                    maskOpacity={overlayOpacity}
+                  />
+                )}
+
+                {/* Hippocampus focus mode */}
+                {viewMode === "focus" && (
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <div>
+                      <div className="mb-2 text-center text-xs text-white/50">Left Hippocampus</div>
+                      <NiivueViewer
+                        ref={niivueLRef}
+                        jobId={liveCase.job_id}
+                        mode="crop_L"
+                        showHeatmap={showHeatmap}
+                        heatmapOpacity={overlayOpacity}
+                      />
+                    </div>
+                    <div>
+                      <div className="mb-2 text-center text-xs text-white/50">Right Hippocampus</div>
+                      <NiivueViewer
+                        ref={niivueRRef}
+                        jobId={liveCase.job_id}
+                        mode="crop_R"
+                        showHeatmap={showHeatmap}
+                        heatmapOpacity={overlayOpacity}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Fallback --- demo/static cases */
+              <div
+                className="grid grid-cols-1 gap-4 lg:grid-cols-2"
+                onWheel={onWheelSlices}
+              >
+                <FakeHippocampusCanvas
+                  side="Left"
+                  plane={plane}
+                  slice={slice}
+                  datasetClass={caseInfo.datasetClass}
+                  showRegion={showRegion}
+                  showHeatmap={showHeatmap}
+                  showCrosshair={showCrosshair}
+                  overlayOpacity={overlayOpacity}
+                />
+                <FakeHippocampusCanvas
+                  side="Right"
+                  plane={plane}
+                  slice={slice}
+                  datasetClass={caseInfo.datasetClass}
+                  showRegion={showRegion}
+                  showHeatmap={showHeatmap}
+                  showCrosshair={showCrosshair}
+                  overlayOpacity={overlayOpacity}
+                />
+              </div>
+            )}
 
             <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -400,7 +581,7 @@ export default function ViewerPage() {
                 onClick={() =>
                   router.push(
                     `/explain?case=${encodeURIComponent(
-                      caseId
+                      displayCaseId
                     )}&region=${encodeURIComponent(caseInfo.region)}`
                   )
                 }
@@ -414,7 +595,7 @@ export default function ViewerPage() {
                 onClick={() =>
                   router.push(
                     `/reports?case=${encodeURIComponent(
-                      caseId
+                      displayCaseId
                     )}&region=${encodeURIComponent(caseInfo.region)}`
                   )
                 }
@@ -464,7 +645,7 @@ export default function ViewerPage() {
           <div className="glass pulse-trigger rounded-[28px] p-5">
             <div className="flex items-center gap-2 text-sm text-white/70">
               <Activity className="h-4 w-4 text-white/50" />
-              Radiomic Features
+              Classification Probabilities
             </div>
 
             <div className="mt-4 space-y-4">
@@ -507,12 +688,12 @@ export default function ViewerPage() {
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="text-xs text-white/50">Shape</div>
                 <div className="mt-1 text-sm font-medium text-white">
-                  2 × 64 × 64 × 64
+                  2 -- 64 -- 64 -- 64
                 </div>
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="text-xs text-white/50">Region</div>
+                <div className="text-xs text-white/50">Target ROI</div>
                 <div className="mt-1 text-sm font-medium text-white">
                   Bilateral Hippocampi
                 </div>
@@ -560,11 +741,11 @@ export default function ViewerPage() {
                 <span>
                   Latency: <span className="text-white/85">{caseInfo.latency}</span>
                 </span>
-                <span>•</span>
+                <span>---</span>
                 <span>
                   Plane: <span className="text-white/85">{plane}</span>
                 </span>
-                <span>•</span>
+                <span>---</span>
                 <span>
                   Slice: <span className="text-white/85">{slice + 1}</span>
                 </span>
@@ -574,7 +755,7 @@ export default function ViewerPage() {
                 onClick={() =>
                   router.push(
                     `/explain?case=${encodeURIComponent(
-                      caseId
+                      displayCaseId
                     )}&region=${encodeURIComponent(caseInfo.region)}`
                   )
                 }
@@ -585,6 +766,138 @@ export default function ViewerPage() {
               </button>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Manual slide-in panel --- fixed to viewport right, no backdrop blur so viewer remains usable */}
+      <div
+        className={cn(
+          "fixed right-0 top-0 z-50 h-full w-[380px] overflow-y-auto border-l border-white/10 bg-[rgba(8,8,14,0.97)] shadow-[-20px_0_60px_rgba(0,0,0,0.5)] transition-transform duration-300 ease-in-out",
+          showManual ? "translate-x-0" : "translate-x-full"
+        )}
+      >
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[rgba(8,8,14,0.97)] px-5 py-4">
+          <div className="flex items-center gap-2">
+            <BookOpen className="h-4 w-4 text-cyan-400" />
+            <span className="text-sm font-semibold text-white">Viewer Manual</span>
+          </div>
+          <button
+            onClick={() => setShowManual(false)}
+            className="rounded-xl p-1.5 text-white/50 transition hover:bg-white/10 hover:text-white"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-6 p-5 text-sm">
+
+          {/* Viewing planes */}
+          <section>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-cyan-400">Viewing Planes</h3>
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-white/8 bg-white/4 p-3">
+                <div className="mb-1 font-medium text-white">Axial</div>
+                <p className="text-xs leading-5 text-white/55">
+                  Horizontal slices viewed from above. Shows left-right and front-back brain structure. Best for comparing hippocampal volume symmetry between hemispheres.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/8 bg-white/4 p-3">
+                <div className="mb-1 font-medium text-white">Coronal</div>
+                <p className="text-xs leading-5 text-white/55">
+                  Slices from front to back (as if facing the patient). Ideal for visualising hippocampal shape and medial temporal lobe atrophy -- the primary region of interest in this pipeline.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/8 bg-white/4 p-3">
+                <div className="mb-1 font-medium text-white">Sagittal</div>
+                <p className="text-xs leading-5 text-white/55">
+                  Side-profile slices. Useful for assessing the anterior-posterior extent of hippocampal tissue and cortical thickness along the medial wall.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Controls */}
+          <section>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-cyan-400">Controls</h3>
+            <div className="space-y-2 text-xs text-white/60">
+              <div className="flex gap-3">
+                <span className="mt-0.5 shrink-0 rounded-lg border border-white/10 bg-white/8 px-2 py-0.5 font-mono text-white/70">Slice slider</span>
+                <span className="leading-5">Scrolls through the 64 slices of the volume. You can also scroll with the mouse wheel directly on the image.</span>
+              </div>
+              <div className="flex gap-3">
+                <span className="mt-0.5 shrink-0 rounded-lg border border-white/10 bg-white/8 px-2 py-0.5 font-mono text-white/70">AI Region</span>
+                <span className="leading-5">Toggles the white overlay ellipses marking the bilateral hippocampi -- the region targeted by the radiomic feature extractor.</span>
+              </div>
+              <div className="flex gap-3">
+                <span className="mt-0.5 shrink-0 rounded-lg border border-white/10 bg-white/8 px-2 py-0.5 font-mono text-white/70">Heatmap</span>
+                <span className="leading-5">Colour overlay representing AI classification risk. Red/orange tones indicate higher AD likelihood; cyan/emerald tones indicate lower risk (NC).</span>
+              </div>
+              <div className="flex gap-3">
+                <span className="mt-0.5 shrink-0 rounded-lg border border-white/10 bg-white/8 px-2 py-0.5 font-mono text-white/70">Crosshair</span>
+                <span className="leading-5">Displays reference lines at the centre of the field of view. Useful for visual alignment when comparing left and right hippocampi.</span>
+              </div>
+              <div className="flex gap-3">
+                <span className="mt-0.5 shrink-0 rounded-lg border border-white/10 bg-white/8 px-2 py-0.5 font-mono text-white/70">Overlay intensity</span>
+                <span className="leading-5">Controls the transparency of the heatmap overlay. Lower values show more of the underlying MRI; higher values emphasise the risk colourmap.</span>
+              </div>
+              {hasVolumes && (
+                <div className="flex gap-3">
+                  <span className="mt-0.5 shrink-0 rounded-lg border border-white/10 bg-white/8 px-2 py-0.5 font-mono text-white/70">Full Brain / Hippocampus Focus</span>
+                  <span className="leading-5">Switches between a whole-brain NIfTI view and a cropped bilateral hippocampus view for closer inspection.</span>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Prediction summary */}
+          <section>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-cyan-400">Reading the Prediction Summary</h3>
+            <p className="mb-2 text-xs leading-5 text-white/55">
+              The large percentage is the model&apos;s overall confidence in its final classification. The coloured bar provides a visual representation -- wider bars indicate higher certainty.
+            </p>
+            <div className="space-y-2 text-xs text-white/60">
+              <div className="flex items-start gap-2">
+                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-red-400" />
+                <span><span className="font-medium text-white/80">AD (Alzheimer&apos;s Disease)</span> -- red theme. The cascade classified the patient as likely having AD. Consider specialist referral and confirmatory biomarker imaging.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-amber-400" />
+                <span><span className="font-medium text-white/80">MCI (Mild Cognitive Impairment)</span> -- amber theme. The case passed the AD threshold but was classified as MCI. Follow-up imaging and cognitive assessment is advised.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-cyan-400" />
+                <span><span className="font-medium text-white/80">NC (Normal Cognition)</span> -- cyan theme. The cascade stopped early with no significant pathological indicators detected.</span>
+              </div>
+            </div>
+          </section>
+
+          {/* Classification probabilities */}
+          <section>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-cyan-400">Classification Probabilities</h3>
+            <p className="mb-2 text-xs leading-5 text-white/55">
+              Each bar corresponds to one stage of the three-stage cascade pipeline:
+            </p>
+            <div className="space-y-2 text-xs text-white/60">
+              <div className="flex items-start gap-2">
+                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-red-400" />
+                <span><span className="font-medium text-white/80">Task 1 -- AD probability</span>: the binary classifier&apos;s confidence that the scan shows Alzheimer&apos;s pathology. If below threshold, the cascade continues to Task 3.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-amber-400" />
+                <span><span className="font-medium text-white/80">Task 3 -- MCI probability</span>: only runs if Task 1 is inconclusive. Differentiates MCI from normal cognition.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-purple-400" />
+                <span><span className="font-medium text-white/80">Task 2 -- Conversion risk</span>: only runs for MCI cases. Estimates the likelihood of conversion to AD within the next 18--36 months.</span>
+              </div>
+            </div>
+          </section>
+
+          {/* Disclaimer */}
+          <div className="rounded-2xl border border-amber-400/20 bg-amber-400/8 p-3 text-xs leading-5 text-amber-300/80">
+            This viewer is a research and clinical-support tool. All AI outputs should be interpreted in conjunction with full clinical assessment. AI may make mistakes -- results do not constitute a diagnosis.
+          </div>
+
         </div>
       </div>
     </div>

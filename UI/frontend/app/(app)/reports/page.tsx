@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { REPORT_DATA, type DatasetClass } from "@/lib/cases";
 import { CaseSwitcher } from "@/components/ui/case-switcher";
+import { useAnalysisStore, type AnalysisCase } from "@/lib/analysis-store";
 import {
   FileText,
   Brain,
@@ -38,6 +39,74 @@ function classTheme(datasetClass: DatasetClass) {
   };
 }
 
+// -- Convert a real pipeline result into a report-compatible object -------------
+function buildLiveReport(c: AnalysisCase) {
+  const final    = c.result.final;
+  const pred     = final.prediction;
+  const conf     = final.confidence;
+  const task1    = c.result.task1;
+  const task3    = c.result.task3;
+  const task2    = c.result.task2;
+
+  // Derive dataset class
+  const datasetClass: DatasetClass =
+    pred.includes("Alzheimer") ? "AD" :
+    pred.includes("MCI")       ? "MCI" : "NC";
+
+  // Derive a decision label
+  const decision =
+    datasetClass === "AD"  ? "Alzheimer's Disease likely" :
+    datasetClass === "MCI" ? (task2?.label === "converting_MCI" ? "Converting MCI --- High Risk" : "Stable MCI") :
+    "Cognitively Normal";
+
+  // Build feature bars from raw probabilities
+  const adProb   = task1?.probabilities?.AD  ?? 0;
+  const mciProb  = task3?.probabilities?.MCI ?? 0;
+  const ncProb   = task1?.probabilities?.NC  ?? 0;
+  const convProb = task2?.probabilities?.converting_MCI ?? 0;
+
+  const features = [
+    { name: "AD Probability",        value: adProb,   color: "bg-red-400",    note: "Likelihood of Alzheimer's Disease pattern" },
+    { name: "MCI Probability",       value: mciProb,  color: "bg-amber-400",  note: "Likelihood of Mild Cognitive Impairment" },
+    { name: "Normal Probability",    value: ncProb,   color: "bg-cyan-400",   note: "Likelihood of cognitively normal pattern" },
+    { name: "Conversion Risk",       value: convProb, color: "bg-purple-400", note: "Risk of MCI progressing to AD (if MCI detected)" },
+  ];
+
+  // Summary text
+  const summary =
+    datasetClass === "AD"
+      ? `Radiomic analysis of bilateral hippocampal volumes indicates a high probability (${(adProb*100).toFixed(1)}%) of Alzheimer's Disease-consistent texture patterns. The cascade classifier stopped at Task 1 (AD vs CN), indicating clear differentiation from normal cognition.`
+      : datasetClass === "MCI"
+      ? `The scan shows texture patterns consistent with Mild Cognitive Impairment (MCI probability ${(mciProb*100).toFixed(1)}%). The cascade proceeded to Task 2 (Stable vs Converting MCI). ${convProb > 0.5 ? "Conversion risk is elevated --- closer monitoring is advised." : "Current trajectory appears stable."}`
+      : `Bilateral hippocampal radiomic features are within normal range. AD probability is low (${(adProb*100).toFixed(1)}%) and MCI probability is below threshold (${(mciProb*100).toFixed(1)}%). No immediate clinical concern indicated.`;
+
+  const recommendation =
+    datasetClass === "AD"
+      ? "Refer to specialist for comprehensive neurological evaluation. Consider PET imaging and CSF biomarker confirmation. Initiate care planning discussion."
+      : datasetClass === "MCI" && convProb > 0.5
+      ? "Schedule follow-up MRI within 6 months. Monitor cognitive function with standardised assessments. Consider CSF biomarker testing if not already done."
+      : datasetClass === "MCI"
+      ? "Annual MRI follow-up recommended. Continue monitoring with cognitive assessments. Lifestyle intervention may be beneficial."
+      : "Routine monitoring as per standard clinical protocol. No immediate intervention required.";
+
+  return {
+    datasetClass,
+    decision,
+    confidence: conf,
+    region: c.region,
+    latency: "~3.2s",
+    status: "Complete",
+    summary,
+    ai_narrative: c.result.ai_narrative,
+    recommendation,
+    features,
+    explainability: `The stacking ensemble cascade evaluated this case across ${final.cascade_stopped_at === "task1" ? "1 stage" : final.cascade_stopped_at === "task3" ? "2 stages" : "3 stages"}. Feature alignment used ${c.scans.length} longitudinal scan${c.scans.length > 1 ? "s" : ""} with a follow-up period derived from scan dates. Prediction stopped at ${final.cascade_stopped_at}.`,
+    notes: `Patient: ${c.patient.age}yo ${c.patient.sex === "M" ? "Male" : "Female"} -- Education: ${c.patient.education}yr -- Race: ${c.patient.race}${c.patient.apoe ? ` -- APOE: ${c.patient.apoe}` : ""} -- Scans: ${c.scans.map(s => s.date).join(", ")}`,
+    volumeShape: "(2, 64, 64, 64)",
+    preprocessing: "N4 bias field correction --- MNI152 registration (Rigid + Affine) --- Atlas-based hippocampal crop --- Per-channel p1/p99 quantization (Ng=32)",
+  };
+}
+
 export default function ReportsPage() {
   usePageTitle("Reports");
   const searchParams = useSearchParams();
@@ -46,10 +115,22 @@ export default function ReportsPage() {
   const caseId = searchParams.get("case") || "AUD-0231";
   const fallbackRegion = searchParams.get("region") || "Bilateral Hippocampus";
 
-  const reportCase = REPORT_DATA[caseId] || {
-    ...REPORT_DATA["AUD-0231"],
-    region: fallbackRegion,
-  };
+  // Check store for a real pipeline result first, fall back to static demo data.
+  // storeReady gates all store reads so SSR and the first client render agree.
+  const [storeReady, setStoreReady] = useState(false);
+  useEffect(() => { setStoreReady(true); }, []);
+
+  const storeCase  = useAnalysisStore((s) => s.getCase(caseId));
+  const latestCase = useAnalysisStore((s) => s.latestCase());
+
+  const liveCase: AnalysisCase | undefined = !storeReady ? undefined
+    : storeCase ?? ((!caseId || !REPORT_DATA[caseId]) ? latestCase : undefined);
+
+  const reportCase = liveCase
+    ? buildLiveReport(liveCase)
+    : REPORT_DATA[caseId] ?? { ...REPORT_DATA["AUD-0231"], region: fallbackRegion };
+
+  const displayCaseId = liveCase?.id ?? caseId;
 
   const features = useMemo(() => reportCase.features, [reportCase]);
   const theme = classTheme(reportCase.datasetClass);
@@ -88,7 +169,7 @@ export default function ReportsPage() {
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Clinical Report — ${caseId}</title>
+  <title>Clinical Report --- ${displayCaseId}</title>
   <style>
     @page { size: A4; margin: 16mm 18mm; }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -97,7 +178,7 @@ export default function ReportsPage() {
       font-size: 9.5pt; color: #111827; background: #fff; line-height: 1.55;
     }
 
-    /* ── Header ─────────────────────────────────────────── */
+    /* -- Header ------------------------------------------- */
     .doc-header {
       display: flex; align-items: flex-start; justify-content: space-between;
       border-bottom: 2px solid #111827; padding-bottom: 10px; margin-bottom: 18px;
@@ -108,7 +189,7 @@ export default function ReportsPage() {
     .doc-meta { text-align: right; font-size: 8pt; color: #6b7280; line-height: 1.7; }
     .doc-meta strong { color: #111827; }
 
-    /* ── Classification banner ───────────────────────────── */
+    /* -- Classification banner ----------------------------- */
     .classification {
       display: flex; align-items: center; gap: 12px;
       background: #f9fafb; border: 1px solid #e5e7eb;
@@ -125,7 +206,7 @@ export default function ReportsPage() {
     .conf-bar-track { margin-top: 4px; height: 6px; background: #e5e7eb; border-radius: 99px; width: 180px; }
     .conf-bar-fill  { height: 100%; background: ${classColor}; border-radius: 99px; width: ${confPct}%; }
 
-    /* ── Sections ────────────────────────────────────────── */
+    /* -- Sections ------------------------------------------ */
     .section { margin-bottom: 16px; page-break-inside: avoid; }
     .section-title {
       font-size: 7pt; font-weight: 700; text-transform: uppercase;
@@ -134,13 +215,13 @@ export default function ReportsPage() {
     }
     .prose { font-size: 9pt; color: #374151; line-height: 1.65; }
 
-    /* ── Info grid ───────────────────────────────────────── */
+    /* -- Info grid ----------------------------------------- */
     .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .info-cell { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 10px; }
     .info-label { font-size: 7pt; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.6px; }
     .info-value { font-size: 9pt; font-weight: 600; color: #111827; margin-top: 2px; }
 
-    /* ── Features table ──────────────────────────────────── */
+    /* -- Features table ------------------------------------ */
     table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
     th {
       text-align: left; font-size: 7pt; font-weight: 700; text-transform: uppercase;
@@ -155,10 +236,10 @@ export default function ReportsPage() {
     .bar-track { height: 5px; background: #e5e7eb; border-radius: 99px; }
     .bar-fill  { height: 100%; background: #7c3aed; border-radius: 99px; }
 
-    /* ── Two-col layout ──────────────────────────────────── */
+    /* -- Two-col layout ------------------------------------ */
     .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
-    /* ── Footer ──────────────────────────────────────────── */
+    /* -- Footer -------------------------------------------- */
     .doc-footer {
       margin-top: 20px; padding-top: 8px; border-top: 1px solid #e5e7eb;
       display: flex; justify-content: space-between; align-items: center;
@@ -180,7 +261,7 @@ export default function ReportsPage() {
     </div>
     <div class="doc-meta">
       <div><strong>CLINICAL REPORT</strong></div>
-      <div>Case ID: <strong>${caseId}</strong></div>
+      <div>Case ID: <strong>${displayCaseId}</strong></div>
       <div>Region: <strong>${reportCase.region}</strong></div>
       <div>Generated: <strong>${date}</strong></div>
     </div>
@@ -191,7 +272,7 @@ export default function ReportsPage() {
     <div class="class-badge">${reportCase.datasetClass}</div>
     <div>
       <div class="class-decision">${reportCase.decision}</div>
-      <div class="class-conf">Confidence: ${confPct}% &nbsp;·&nbsp; Latency: ${reportCase.latency} on PYNQ-Z2 &nbsp;·&nbsp; Status: ${reportCase.status}</div>
+      <div class="class-conf">Confidence: ${confPct}% &nbsp;--&nbsp; Latency: ${reportCase.latency} on PYNQ-Z2 &nbsp;--&nbsp; Status: ${reportCase.status}</div>
       <div class="conf-bar-track"><div class="conf-bar-fill"></div></div>
     </div>
   </div>
@@ -248,8 +329,8 @@ export default function ReportsPage() {
 
   <!-- Footer -->
   <div class="doc-footer">
-    <span>Synapse.PL &nbsp;·&nbsp; Precision Neurodiagnostics &nbsp;·&nbsp; For clinical review only</span>
-    <span class="footer-badge">PYNQ-Z2 · 3D GLCM · Radiomics Classifier</span>
+    <span>Synapse.PL &nbsp;--&nbsp; Precision Neurodiagnostics &nbsp;--&nbsp; For clinical review only</span>
+    <span class="footer-badge">PYNQ-Z2 -- 3D GLCM -- Radiomics Classifier</span>
   </div>
 
   <script>window.onload = () => { window.print(); }</script>
@@ -289,7 +370,7 @@ export default function ReportsPage() {
 
         <div className="flex flex-wrap gap-2">
           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs text-white/70">
-            Case: <span className="text-white/90">{caseId}</span> • Status:{" "}
+            Case: <span className="text-white/90">{displayCaseId}</span> --- Status:{" "}
             <span className="text-white/90">{reportCase.status}</span>
           </div>
           <button
@@ -302,7 +383,7 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      <CaseSwitcher currentCaseId={caseId} />
+      <CaseSwitcher currentCaseId={displayCaseId} />
 
       {/* Top Summary Grid */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_0.85fr]">
@@ -312,9 +393,17 @@ export default function ReportsPage() {
             Executive Summary
           </div>
 
-          <p className="mt-4 text-sm leading-7 text-white/70">
-            {reportCase.summary}
-          </p>
+          {reportCase.ai_narrative ? (
+            <div className="mt-4">
+              <div className="mb-2 flex items-center gap-1.5">
+                <span className="rounded-md border border-purple-400/25 bg-purple-400/10 px-1.5 py-0.5 text-[10px] font-medium text-purple-300">AI Generated</span>
+                <span className="text-[10px] text-white/30">GPT-4o-mini -- for clinical reference only</span>
+              </div>
+              <p className="text-sm leading-7 text-white/80">{reportCase.ai_narrative}</p>
+            </div>
+          ) : (
+            <p className="mt-4 text-sm leading-7 text-white/70">{reportCase.summary}</p>
+          )}
 
           <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
             <div className="text-xs text-white/50">Conclusion</div>
@@ -352,7 +441,7 @@ export default function ReportsPage() {
             <span>
               Region: <span className="text-white/80">{reportCase.region}</span>
             </span>
-            <span>•</span>
+            <span>---</span>
             <span>
               Latency: <span className="text-white/80">{reportCase.latency}</span>
             </span>
@@ -366,7 +455,7 @@ export default function ReportsPage() {
           <div className="glass pulse-trigger rounded-[28px] p-6">
             <div className="flex items-center gap-2 text-sm text-white/70">
               <Activity className="h-4 w-4 text-white/50" />
-              Radiomic Findings
+              Classification Probabilities
             </div>
 
             <div className="mt-5 space-y-4">
@@ -484,7 +573,7 @@ export default function ReportsPage() {
                   Pipeline:{" "}
                   <span className="text-white/80">3D GLCM Radiomics</span>
                 </span>
-                <span>•</span>
+                <span>---</span>
                 <span>
                   Output: <span className="text-white/80">{reportCase.decision}</span>
                 </span>

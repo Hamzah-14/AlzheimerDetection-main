@@ -14,7 +14,7 @@ export function Topbar() {
   const openCP = useCommandPaletteStore((s) => s.setOpen);
   const [tick, setTick] = useState(0);
 
-  /* ── Live FPGA ticker ─────────────────────────────────────────── */
+  /* ------ Live FPGA ticker --------------------------------------------------------------------------------------------------------------------------------- */
   useEffect(() => {
     const id = setInterval(() => {
       setTick((v) => (v + 1) % 100);
@@ -36,7 +36,7 @@ export function Topbar() {
       <div className="pointer-events-none absolute inset-0 opacity-40 bg-[radial-gradient(900px_220px_at_30%_0%,rgba(168,85,247,0.14),transparent_60%)]" />
 
       <div className="relative flex items-center gap-2 px-4 py-3">
-        {/* ── Command palette trigger (replaces old search input) ── */}
+        {/* ------ Command palette trigger (replaces old search input) ------ */}
         <button
           data-tour="topbar-search"
           onClick={() => openCP(true)}
@@ -47,14 +47,14 @@ export function Topbar() {
         >
           <Search className="h-4 w-4 shrink-0 text-white/35" />
           <span className="flex-1 truncate text-sm">
-            Search cases, pages, actions…
+            Search cases, pages, actions---
           </span>
           <kbd className="shrink-0 rounded-lg border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] text-white/30">
-            {isMac ? "⌘K" : "Ctrl+K"}
+            {isMac ? "---K" : "Ctrl+K"}
           </kbd>
         </button>
 
-        {/* ── Live status pills ─────────────────────────────────── */}
+        {/* ------ Live status pills --------------------------------------------------------------------------------------------------------- */}
         <div className="hidden items-center gap-2 xl:flex" data-tour="fpga-status">
           <span className="flex h-9 items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 text-xs text-white/70 whitespace-nowrap">
             <span className="relative flex h-2.5 w-2.5">
@@ -90,7 +90,7 @@ export function Topbar() {
           </div>
         </div>
 
-        {/* ── Theme toggle ───────────────────────────────────── */}
+        {/* ------ Theme toggle --------------------------------------------------------------------------------------------------------------- */}
         <button
           data-tour="theme-toggle"
           onClick={toggleTheme}

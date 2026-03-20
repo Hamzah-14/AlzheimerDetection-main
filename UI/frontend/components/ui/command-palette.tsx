@@ -26,7 +26,7 @@ import { DASHBOARD_CASES } from "@/lib/cases";
 import { cn } from "@/lib/utils";
 import { Portal } from "@/components/ui/portal";
 
-/* ── Item definitions ─────────────────────────────────────── */
+/* ------ Item definitions --------------------------------------------------------------------------------------------------------------------- */
 interface CPItem {
   id: string;
   label: string;
@@ -48,7 +48,7 @@ function useModKey() {
   const [mod, setMod] = useState("Ctrl");
   useEffect(() => {
     if (typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/.test(navigator.userAgent)) {
-      setMod("⌘");
+      setMod("---");
     }
   }, []);
   return mod;
@@ -115,7 +115,7 @@ export function CommandPalette() {
   const caseItems: CPItem[] = casePool.map((c) => ({
     id: `case-${c.id}`,
     label: c.id,
-    description: `${c.region} · Risk: ${c.risk}`,
+    description: `${c.region} -- Risk: ${c.risk}`,
     icon: Scan,
     group: "case" as const,
     onSelect: () => router.push(`/viewer?case=${encodeURIComponent(c.id)}&region=${encodeURIComponent(c.region)}`),
@@ -150,7 +150,7 @@ export function CommandPalette() {
     setCursor(0);
   }, [setOpen]);
 
-  /* Global ⌘K / Ctrl+K */
+  /* Global ---K / Ctrl+K */
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -212,7 +212,7 @@ export function CommandPalette() {
             onClick={close}
           />
 
-          {/* Panel — anchored to topbar search bar */}
+          {/* Panel --- anchored to topbar search bar */}
           <motion.div
             key="cp-panel"
             data-cp-panel
@@ -230,7 +230,7 @@ export function CommandPalette() {
             className="overflow-hidden rounded-2xl border border-white/15 bg-[#0b0a18]/98 shadow-2xl shadow-black/60 backdrop-blur-2xl"
             onKeyDown={onKeyDown}
           >
-            {/* Search row — same height as the topbar button it replaces */}
+            {/* Search row --- same height as the topbar button it replaces */}
             <div
               className="flex items-center gap-3 border-b border-white/[0.07] px-4"
               style={{ height: anchor.height }}
@@ -240,7 +240,7 @@ export function CommandPalette() {
                 ref={inputRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search pages, actions, cases…"
+                placeholder="Search pages, actions, cases---"
                 className="flex-1 bg-transparent text-sm text-white placeholder:text-white/35 focus:outline-none"
               />
               <div className="flex items-center gap-1.5">
@@ -321,7 +321,7 @@ export function CommandPalette() {
 
             {/* Footer hint */}
             <div className="border-t border-white/[0.06] px-4 py-2.5 flex items-center gap-4 text-[10px] text-white/25">
-              <span className="flex items-center gap-1"><kbd className="rounded border border-white/10 px-1 py-0.5">↑↓</kbd> Navigate</span>
+              <span className="flex items-center gap-1"><kbd className="rounded border border-white/10 px-1 py-0.5">------</kbd> Navigate</span>
               <span className="flex items-center gap-1"><CornerDownLeft className="h-3 w-3" /> Select</span>
               <span className="flex items-center gap-1"><kbd className="rounded border border-white/10 px-1 py-0.5">Esc</kbd> Close</span>
             </div>

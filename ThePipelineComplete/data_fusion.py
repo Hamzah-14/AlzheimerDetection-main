@@ -58,20 +58,22 @@ def build_metadata_array(patient_data, prefix=""):
     csf_prefix = "csf_baseline_csf_" if is_subject_level else "csf_"
 
     metadata = {
-        f"{prefix}age"           : patient_data["age"],
-        f"{prefix}sex_encoded"   : patient_data["sex_encoded"],
-        f"{prefix}education"     : patient_data["education"],
-        f"{prefix}apoe_e4_count" : patient_data["apoe_e4_count"],
-        f"{prefix}race_White"    : patient_data["race_White"],
-        f"{prefix}race_Black"    : patient_data["race_Black"],
-        f"{prefix}race_Asian"    : patient_data["race_Asian"],
-        f"{prefix}race_Hispanic" : patient_data["race_Hispanic"],
-        f"{prefix}race_Other"    : patient_data["race_Other"],
-        f"{csf_prefix}ABETA42"   : patient_data["csf_ABETA42"],
-        f"{csf_prefix}TAU"       : patient_data["csf_TAU"],
-        f"{csf_prefix}PTAU"      : patient_data["csf_PTAU"],
-        "n_scans"                : patient_data["n_scans"],
-        "followup_months"        : patient_data["followup_months"],
+        f"{prefix}age"                 : patient_data["age"],
+        f"{prefix}sex_encoded"         : patient_data["sex_encoded"],
+        f"{prefix}education"           : patient_data["education"],
+        f"{prefix}apoe_e4_count"       : patient_data["apoe_e4_count"],
+        f"{prefix}race_White"          : patient_data["race_White"],
+        f"{prefix}race_Black"          : patient_data["race_Black"],
+        f"{prefix}race_Asian"          : patient_data["race_Asian"],
+        f"{prefix}race_Hispanic"       : patient_data["race_Hispanic"],
+        f"{prefix}race_Other"          : patient_data["race_Other"],
+        f"{csf_prefix}ABETA42"         : patient_data.get("csf_ABETA42"),
+        f"{csf_prefix}TAU"             : patient_data.get("csf_TAU"),
+        f"{csf_prefix}PTAU"            : patient_data.get("csf_PTAU"),
+        # PTAU/ABETA42 ratio — strong AD biomarker; computed when both are present.
+        f"{csf_prefix}ptau_abeta42"    : patient_data.get("csf_ptau_abeta42"),
+        "n_scans"                      : patient_data["n_scans"],
+        "followup_months"              : patient_data["followup_months"],
     }
     values = []
     names  = []
