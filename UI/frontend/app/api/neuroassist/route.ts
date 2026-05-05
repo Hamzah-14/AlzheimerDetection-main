@@ -1,17 +1,17 @@
-// app/api/neuroassist/route.ts --- Groq version
+// app/api/neuroassist/route.ts --- OpenAI version
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   const { messages, system } = await req.json();
 
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
+      "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
+      model: "gpt-4o-mini",
       max_tokens: 1000,
       messages: [
         { role: "system", content: system },
@@ -23,9 +23,9 @@ export async function POST(req: NextRequest) {
   const data = await res.json();
 
   if (!res.ok || data.error) {
-    console.error("Groq API error:", JSON.stringify(data, null, 2));
+    console.error("OpenAI API error:", JSON.stringify(data, null, 2));
     return NextResponse.json(
-      { content: [{ text: `Groq error: ${data.error?.message ?? res.status}` }] },
+      { content: [{ text: `OpenAI error: ${data.error?.message ?? res.status}` }] },
       { status: 200 }
     );
   }

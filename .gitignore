@@ -1,3 +1,6 @@
 node_modules/
 next/
-.env/
+ThePipelineComplete/1.py
+ThePipelineComplete/2.py
+tmp/
+scans/

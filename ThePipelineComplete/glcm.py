@@ -292,6 +292,8 @@ def _build_feature_names() -> list:
     names = (
         [f"L_{k}" for k in base_keys] +
         [f"R_{k}" for k in base_keys] +
+        [f"A_{k}" for k in base_keys] +
+        [f"asym_ratio_{k}" for k in base_keys] +
         [f"asym_diff_{k}" for k in base_keys]
     )
     return names
@@ -329,15 +331,22 @@ def extract_features(bin_path: str) -> tuple[np.ndarray, list]:
     L_arr = np.array([featL_dict[k] for k in base_keys], dtype=np.float32)
     R_arr = np.array([featR_dict[k] for k in base_keys], dtype=np.float32)
 
-    # Match original asymmetry formula
-    denom = (np.abs(L_arr) + np.abs(R_arr) + EPS).astype(np.float32)
-    asym_arr = (L_arr - R_arr) / denom
+    # Three asymmetry families — all needed by the stacking model:
+    #   A_          raw diff  L-R         (training pipeline primary asymmetry)
+    #   asym_ratio_ normalised (L-R)/(|L|+|R|)
+    #   asym_diff_  raw diff  L-R         (same values as A_, different name in survived list)
+    denom      = (np.abs(L_arr) + np.abs(R_arr) + EPS).astype(np.float32)
+    asym_A     = (L_arr - R_arr).astype(np.float32)                  # A_ prefix
+    asym_ratio = ((L_arr - R_arr) / denom).astype(np.float32)        # asym_ratio_ prefix
+    asym_diff  = (L_arr - R_arr).astype(np.float32)                  # asym_diff_ prefix
 
-    features = np.concatenate([L_arr, R_arr, asym_arr]).astype(np.float32, copy=False)
+    features = np.concatenate([L_arr, R_arr, asym_A, asym_ratio, asym_diff]).astype(np.float32, copy=False)
 
     feature_names = (
         [f"L_{k}" for k in base_keys] +
         [f"R_{k}" for k in base_keys] +
+        [f"A_{k}" for k in base_keys] +
+        [f"asym_ratio_{k}" for k in base_keys] +
         [f"asym_diff_{k}" for k in base_keys]
     )
 
