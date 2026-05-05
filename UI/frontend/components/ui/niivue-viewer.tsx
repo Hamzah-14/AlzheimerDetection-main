@@ -79,6 +79,7 @@ const NiivueViewer = forwardRef<NiivueViewerHandle, NiivueViewerProps>(
             show3Dcrosshair: true,
             isOrientCube:    true,
             isColorbar:      false,
+            isAntiAlias:     false,
           });
 
           await nv.attachToCanvas(canvasRef.current);

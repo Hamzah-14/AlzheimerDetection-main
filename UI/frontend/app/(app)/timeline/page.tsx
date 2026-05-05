@@ -838,11 +838,26 @@ export default function TimelinePage() {
               <span className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[11px] text-white/55">
                 Edu: {liveCase.patient.education} yr
               </span>
-              {liveCase.patient.apoe && (
-                <span className="rounded-xl border border-amber-400/20 bg-amber-400/[0.06] px-2.5 py-1 text-[11px] text-amber-300/80">
-                  APOE {liveCase.patient.apoe}
-                </span>
-              )}
+              {liveCase.patient.apoe && (() => {
+                const g = liveCase.patient.apoe.toLowerCase().replace(/e/g,"").replace("/","");
+                const apoeStyle =
+                  g === "22"       ? "border-emerald-400/25 bg-emerald-400/[0.07] text-emerald-300/90" :
+                  g === "23" || g === "32" ? "border-cyan-400/25 bg-cyan-400/[0.06] text-cyan-300/80" :
+                  g === "33"       ? "border-white/[0.10] bg-white/[0.04] text-white/60" :
+                  g === "24" || g === "42" ? "border-white/[0.10] bg-white/[0.04] text-white/55" :
+                  g === "34" || g === "43" ? "border-amber-400/25 bg-amber-400/[0.07] text-amber-300/85" :
+                  g === "44"       ? "border-red-400/25 bg-red-400/[0.07] text-red-300/85" :
+                                     "border-white/[0.08] bg-white/[0.03] text-white/45";
+                const apoeNote =
+                  g === "22" ? "Protective" : g === "23" || g === "32" ? "Below avg" :
+                  g === "33" ? "Avg risk"  : g === "24" || g === "42"  ? "Mixed" :
+                  g === "34" || g === "43" ? "Elevated" : g === "44" ? "High risk" : "";
+                return (
+                  <span className={`rounded-xl border px-2.5 py-1 text-[11px] ${apoeStyle}`}>
+                    APOE {liveCase.patient.apoe}{apoeNote ? ` - ${apoeNote}` : ""}
+                  </span>
+                );
+              })()}
               <span className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[11px] text-white/55">
                 {liveCase.scans.length} scan{liveCase.scans.length !== 1 ? "s" : ""}
               </span>

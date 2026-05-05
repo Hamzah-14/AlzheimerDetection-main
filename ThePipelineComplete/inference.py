@@ -1,6 +1,7 @@
 #inference.py
 import pickle
 import numpy as np
+import pandas as pd
 
 # =============================================================================
 # TASK DEFINITIONS
@@ -24,8 +25,8 @@ TASKS = {
     },
 }
 
-AD_THRESHOLD  = 0.65
-MCI_THRESHOLD = 0.51
+AD_THRESHOLD  = 0.80
+MCI_THRESHOLD = 0.30
 
 # =============================================================================
 # MODEL LOADER
@@ -57,7 +58,7 @@ def load_task_artifacts(task_key):
     # Load base models + meta learner
     import os, glob
     base_models = {}
-    for path in glob.glob(f"{model_dir}/base_*.pkl"):
+    for path in sorted(glob.glob(f"{model_dir}/base_*.pkl")):
         name = os.path.basename(path).replace(".pkl","").replace("base_","")
         with open(path, "rb") as f:
             base_models[name] = pickle.load(f)
@@ -88,10 +89,13 @@ def run_inference(full_features, full_names, artifacts):
     lookup  = dict(zip(full_names, full_features))
     aligned = [lookup.get(f, float('nan'))
                for f in artifacts["feature_list"]]
-    X = np.array(aligned, dtype=np.float32).reshape(1, -1)
+
+    # Wrap in DataFrame so the imputer matches by column name (not position).
+    # Without this, sklearn warns and imputes by position, corrupting NaN slots.
+    X_df = pd.DataFrame([aligned], columns=artifacts["feature_list"])
 
     # Impute + scale
-    X = artifacts["imputer"].transform(X)
+    X = artifacts["imputer"].transform(X_df)
     X = artifacts["scaler"].transform(X)
 
     # Base model predictions

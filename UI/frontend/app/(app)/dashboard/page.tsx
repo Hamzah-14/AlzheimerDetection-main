@@ -24,6 +24,7 @@ import {
   TrendingDown,
   Minus,
   MapPin,
+  Search,
 } from "lucide-react";
 
 type CaseRow = DashboardCase;
@@ -208,43 +209,6 @@ const StatCard = memo(function StatCard({
   );
 });
 
-const MiniHoverPreviewMRI = memo(function MiniHoverPreviewMRI({
-  risk,
-}: {
-  risk: "High" | "Medium" | "Low";
-}) {
-  const overlayClass =
-    risk === "High"
-      ? "bg-[radial-gradient(circle_at_36%_48%,rgba(239,68,68,0.52),transparent_10%),radial-gradient(circle_at_64%_48%,rgba(249,115,22,0.40),transparent_12%)]"
-      : risk === "Medium"
-      ? "bg-[radial-gradient(circle_at_40%_48%,rgba(249,115,22,0.34),transparent_10%),radial-gradient(circle_at_60%_48%,rgba(168,85,247,0.24),transparent_12%)]"
-      : "bg-[radial-gradient(circle_at_50%_52%,rgba(59,130,246,0.16),transparent_12%),radial-gradient(circle_at_44%_48%,rgba(168,85,247,0.12),transparent_14%)]";
-
-  return (
-    <div data-mri-preview className="relative aspect-square w-full overflow-hidden rounded-2xl border border-white/10 bg-black">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.16),rgba(255,255,255,0.05)_24%,rgba(0,0,0,0.96)_62%)]" />
-      <div className="absolute inset-0 opacity-[0.16] mix-blend-overlay bg-[radial-gradient(rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:4px_4px]" />
-
-      <div className="absolute inset-[12%] rounded-full border border-white/10 opacity-20" />
-      <div className="absolute inset-[22%] rounded-full border border-white/10 opacity-15" />
-      <div className="absolute left-[23%] top-[27%] h-[44%] w-[24%] rounded-full bg-white/10 blur-[6px]" />
-      <div className="absolute right-[23%] top-[27%] h-[44%] w-[24%] rounded-full bg-white/10 blur-[6px]" />
-      <div className="absolute left-[36%] top-[42%] h-[14%] w-[10%] rounded-full bg-white/8 blur-[4px]" />
-      <div className="absolute right-[36%] top-[42%] h-[14%] w-[10%] rounded-full bg-white/8 blur-[4px]" />
-
-      <div className={cn("absolute inset-0 mix-blend-screen", overlayClass)} />
-
-      <div className="absolute left-2.5 top-2.5 rounded-lg border border-white/10 bg-black/60 px-2 py-1 text-[10px] text-white/75 backdrop-blur-md">
-        MRI Preview
-      </div>
-
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute bottom-[16%] left-1/2 top-[16%] w-px -translate-x-1/2 bg-white/10" />
-        <div className="absolute left-[16%] right-[16%] top-1/2 h-px -translate-y-1/2 bg-white/10" />
-      </div>
-    </div>
-  );
-});
 
 /* -- Risk Stratification Heatmap ------------------------------------------- */
 const REGIONS = ["Hippocampus", "Entorhinal", "Temporal", "Prefrontal", "Parietal", "Frontal"] as const;
@@ -446,10 +410,18 @@ export default function DashboardPage() {
     };
   }), [storeCases]);
 
-  const cases: CaseRow[] = useMemo(
+  const allCases: CaseRow[] = useMemo(
     () => [...realCases, ...DASHBOARD_CASES],
     [realCases]
   );
+
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const cases: CaseRow[] = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return allCases;
+    return allCases.filter(c => c.id.toLowerCase().includes(q));
+  }, [allCases, searchQuery]);
 
   const totalProcessed = realCases.length + 28; // 28 = demo baseline
   const highRisk       = realCases.filter(c => c.risk === "High").length + 6;
@@ -632,10 +604,19 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <Card className="glass glow-hover pulse-trigger flex flex-col xl:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Recent Cases</CardTitle>
-            <div className="hidden text-xs text-white/50 sm:block">
-              Last updated: <span className="text-white/80">just now</span>
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <CardTitle className="shrink-0">Recent Cases</CardTitle>
+            <div className="flex flex-1 items-center gap-2">
+              <div className="relative flex-1 max-w-xs ml-auto">
+                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/30" />
+                <input
+                  type="text"
+                  placeholder="Search case ID..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-1.5 pl-8 pr-3 text-xs text-white/80 placeholder-white/25 outline-none focus:border-purple-400/40 focus:bg-white/[0.06] transition"
+                />
+              </div>
             </div>
           </CardHeader>
 
@@ -787,85 +768,97 @@ export default function DashboardPage() {
           onMouseLeave={scheduleHide}
         >
           <div data-hover-preview className="rounded-[24px] border border-white/10 bg-[rgba(8,8,12,0.96)] p-4 shadow-[0_24px_70px_rgba(0,0,0,0.62)] backdrop-blur-2xl">
+            {/* Header */}
             <div className="mb-3 flex items-center justify-between">
-              <div className="text-sm font-medium text-white">
-                Quick Preview
-              </div>
-              <div className="text-[11px] text-white/50">
-                {hoveredPreview.caseData.id}
+              <div className="text-sm font-medium text-white">Case Preview</div>
+              <div className={cn(
+                "rounded-lg border px-2 py-0.5 text-[11px] font-medium",
+                hoveredPreview.caseData.risk === "High"   ? "border-red-400/20 bg-red-400/10 text-red-300" :
+                hoveredPreview.caseData.risk === "Medium" ? "border-amber-400/20 bg-amber-400/10 text-amber-300" :
+                "border-cyan-400/20 bg-cyan-400/10 text-cyan-300"
+              )}>
+                {hoveredPreview.caseData.risk} Risk
               </div>
             </div>
 
-            <div className="grid grid-cols-[190px_1fr] gap-4">
-              <MiniHoverPreviewMRI risk={hoveredPreview.caseData.risk} />
-
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                    <div className="text-[11px] text-white/50">Confidence</div>
-                    <div className="mt-1 text-sm font-medium text-white">
-                      {hoveredPreview.caseData.confidence}
+            {/* Patient metadata */}
+            {(() => {
+              const sc = storeCases.find(c => c.id === hoveredPreview.caseData.id);
+              const age  = sc?.patient.age;
+              const sex  = sc?.patient.sex === "M" ? "Male" : sc?.patient.sex === "F" ? "Female" : null;
+              const apoe = sc?.patient.apoe;
+              const edu  = sc?.patient.education;
+              return (
+                <div className="mb-3 rounded-xl border border-white/[0.07] bg-white/[0.03] p-3">
+                  <div className="mb-1.5 text-[10px] uppercase tracking-wide text-white/30">Patient</div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                    <div>
+                      <span className="text-[10px] text-white/40">Case ID</span>
+                      <div className="text-xs font-medium text-white/80">{hoveredPreview.caseData.id}</div>
+                    </div>
+                    {age != null && (
+                      <div>
+                        <span className="text-[10px] text-white/40">Age</span>
+                        <div className="text-xs font-medium text-white/80">{age} yrs</div>
+                      </div>
+                    )}
+                    {sex && (
+                      <div>
+                        <span className="text-[10px] text-white/40">Sex</span>
+                        <div className="text-xs font-medium text-white/80">{sex}</div>
+                      </div>
+                    )}
+                    {apoe && (
+                      <div>
+                        <span className="text-[10px] text-white/40">APOE</span>
+                        <div className="text-xs font-medium text-white/80">{apoe}</div>
+                      </div>
+                    )}
+                    {edu != null && (
+                      <div>
+                        <span className="text-[10px] text-white/40">Education</span>
+                        <div className="text-xs font-medium text-white/80">{edu} yr</div>
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-[10px] text-white/40">Region</span>
+                      <div className="text-xs font-medium text-white/80">{hoveredPreview.caseData.region}</div>
                     </div>
                   </div>
-
-                  <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                    <div className="text-[11px] text-white/50">
-                      Dominant Feature
-                    </div>
-                    <div className="mt-1 text-sm font-medium text-white">
-                      {hoveredPreview.caseData.feature}
-                    </div>
-                  </div>
                 </div>
+              );
+            })()}
 
-                <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                  <div className="text-[11px] text-white/50">Quick Insight</div>
-                  <p className="mt-1 text-xs leading-5 text-white/72">
-                    {hoveredPreview.caseData.note}
-                  </p>
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-xl border border-white/10 bg-white/[0.04] p-2.5">
+                  <div className="text-[10px] text-white/40">Confidence</div>
+                  <div className="mt-0.5 text-xs font-medium text-white">{hoveredPreview.caseData.confidence}</div>
                 </div>
+                <div className="rounded-xl border border-white/10 bg-white/[0.04] p-2.5">
+                  <div className="text-[10px] text-white/40">Top Feature</div>
+                  <div className="mt-0.5 text-xs font-medium text-white">{hoveredPreview.caseData.feature}</div>
+                </div>
+              </div>
 
-                <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                  <div className="text-[11px] text-white/50">
-                    Recommendation
-                  </div>
-                  <p className="mt-1 text-xs leading-5 text-white/72">
-                    {hoveredPreview.caseData.recommendation}
-                  </p>
-                </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-2.5">
+                <div className="text-[10px] text-white/40">Recommendation</div>
+                <p className="mt-0.5 text-xs leading-5 text-white/70">{hoveredPreview.caseData.recommendation}</p>
+              </div>
 
-                <div className="flex gap-2">
-                  <button
-                    onClick={() =>
-                      router.push(
-                        `/viewer?case=${encodeURIComponent(
-                          hoveredPreview.caseData.id
-                        )}&region=${encodeURIComponent(
-                          hoveredPreview.caseData.region
-                        )}`
-                      )
-                    }
-                    className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-xs text-purple-300 transition hover:bg-white/[0.1] hover:text-purple-200"
-                  >
-                    MRI Viewer
-                    <ArrowUpRight className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    onClick={() =>
-                      router.push(
-                        `/timeline?case=${encodeURIComponent(
-                          hoveredPreview.caseData.id
-                        )}&region=${encodeURIComponent(
-                          hoveredPreview.caseData.region
-                        )}`
-                      )
-                    }
-                    className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-xs text-white/60 transition hover:bg-white/[0.1] hover:text-white/90"
-                  >
-                    Timeline
-                    <GitBranch className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => router.push(`/viewer?case=${encodeURIComponent(hoveredPreview.caseData.id)}&region=${encodeURIComponent(hoveredPreview.caseData.region)}`)}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-xs text-purple-300 transition hover:bg-white/[0.1] hover:text-purple-200"
+                >
+                  MRI Viewer <ArrowUpRight className="h-3 w-3" />
+                </button>
+                <button
+                  onClick={() => router.push(`/timeline?case=${encodeURIComponent(hoveredPreview.caseData.id)}&region=${encodeURIComponent(hoveredPreview.caseData.region)}`)}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-xs text-white/60 transition hover:bg-white/[0.1] hover:text-white/90"
+                >
+                  Timeline <GitBranch className="h-3 w-3" />
+                </button>
               </div>
             </div>
           </div>
